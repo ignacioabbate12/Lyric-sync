@@ -76,6 +76,25 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #av{margin-top:8px;max-height:260px;overflow:auto}
 #av .tr{display:block;width:100%;text-align:left;border-radius:10px;margin:3px 0;font-size:14px}
 #pjs{min-width:200px}
+.mono{font:12.5px ui-monospace,Menlo,Consolas,monospace}
+.grp{display:inline-flex;align-items:center;gap:4px}
+.grp button{padding:.15em .6em;font-size:12px;border-radius:8px}
+.grp input{width:96px}
+#svs{font-size:12px}
+#pk{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;display:flex;justify-content:center;padding:7vh 20px}
+.pkin{width:100%;max-width:680px}
+.pkin h1{font-size:34px;margin-bottom:4px}
+.pc{display:flex;align-items:stretch;background:var(--pn);border:1px solid var(--ln);border-radius:16px;margin:10px 0}
+.pc:hover{border-color:var(--ac)}
+.pco{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:none;border:0;border-radius:16px;padding:14px 16px;text-align:left}
+.pco .nm{font:600 19px Georgia,"Iowan Old Style",serif}
+.pco .m2{color:var(--mu);font-size:13px}
+.pco .b2{align-self:stretch;height:4px;background:var(--ln);border-radius:2px;margin-top:8px;overflow:hidden}
+.pco .b2 i{display:block;height:100%;background:var(--ac)}
+.pcd{background:none;border:0;border-radius:0 16px 16px 0;padding:0 16px;color:var(--mu)}
+.pcd:hover{color:var(--wn)}
+.pknew{display:flex;gap:10px;margin:20px 0 6px}
+.pknew input{flex:1;font-size:16px;padding:.55em .8em}
 dialog{background:var(--pn);color:var(--tx);border:1px solid var(--ln);border-radius:18px;padding:22px 24px;max-width:420px}
 dialog::backdrop{background:rgba(0,0,0,.6)}
 dialog h2{margin:0 0 6px;font:italic 700 22px Georgia,serif}
@@ -85,6 +104,9 @@ dialog p{margin:6px 0;color:var(--mu)}
 <div class="bar">
   <div class="top">
     <h1><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="9" width="3.5" height="6" rx="1.7"/><rect x="7.5" y="4" width="3.5" height="16" rx="1.7"/><rect x="13" y="7" width="3.5" height="10" rx="1.7"/><rect x="18.5" y="10" width="3.5" height="4" rx="1.7"/></svg>Lyric Sync</h1>
+    <span id="ver" class="mu" title="Versión de la app"></span>
+    <button id="chg" title="Cambiar de proyecto"><span id="cn">Proyecto</span> ▾</button>
+    <button id="sv" title="Guardar ahora (Ctrl+S)">Guardar</button><span id="svs" class="mu"></span>
     <label class="btn">Cargar audio<input id="af" type="file" accept="audio/*,video/mp4,video/webm,.mp4,.m4a" hidden></label>
     <audio id="a" controls></audio>
     <select id="sp" title="Velocidad de reproducción"><option value=".5">0.5×</option><option value=".75">0.75×</option><option value="1" selected>1×</option></select>
@@ -103,11 +125,25 @@ dialog p{margin:6px 0;color:var(--mu)}
     <label class="mu"><input id="auto" type="checkbox" checked> Fin de línea automático</label>
   </div>
   <div id="st"></div>
-  <div id="wvb" hidden><canvas id="wv"></canvas><div class="wvc"><span class="mu">Arrastrá el borde de una palabra para moverla · clic: ir a ese punto · rueda: desplazar</span><label class="mu">Zoom <select id="wz"><option value="8">8 s</option><option value="15" selected>15 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label></div></div>
+  <div id="wvb" hidden>
+    <canvas id="wv"></canvas>
+    <div class="wvc">
+      <span>Suena en <b id="wtm" class="mono">00:00.000</b></span>
+      <span>Cursor <b id="whv" class="mono">—</b></span>
+      <span class="mu">Clic: ir a ese punto · arrastrá un borde · rueda: desplazar</span>
+      <label class="mu">Zoom <select id="wz"><option value="2">2 s</option><option value="4">4 s</option><option value="8">8 s</option><option value="15" selected>15 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
+    </div>
+    <div id="wsp" class="wvc" hidden>
+      <b id="wsn"></b>
+      <span class="grp">Inicio <button data-k="s" data-d="-10">−10</button><button data-k="s" data-d="-1">−1</button><input id="wss" type="number" step="0.001" aria-label="Inicio en segundos"><button data-k="s" data-d="1">+1</button><button data-k="s" data-d="10">+10</button></span>
+      <span class="grp">Fin <button data-k="e" data-d="-10">−10</button><button data-k="e" data-d="-1">−1</button><input id="wse" type="number" step="0.001" aria-label="Fin en segundos"><button data-k="e" data-d="1">+1</button><button data-k="e" data-d="10">+10</button></span>
+      <button id="wsh">▶ Oír</button><span class="mu">botones en milisegundos · casillas en segundos</span>
+    </div>
+  </div>
 </div>
 <main>
 <details open id="pj"><summary>Proyectos</summary>
-  <div class="row"><select id="pjs" aria-label="Proyecto"></select><button id="pjnew">Nuevo</button><button id="pjdup">Duplicar</button><button id="pjren">Renombrar</button><button id="pjdel">Borrar</button><button id="ins" class="pri" hidden>Instalar como app</button></div>
+  <div class="row"><select id="pjs" aria-label="Proyecto"></select><button id="pjnew">Nuevo</button><button id="pjdup">Duplicar</button><button id="pjren">Renombrar</button><button id="pjdel">Borrar</button><button id="bkx" title="Guarda todos tus proyectos en un archivo">Exportar respaldo</button><label class="btn" title="Recupera proyectos desde un respaldo">Importar respaldo<input id="bki" type="file" accept=".json,application/json" hidden></label><button id="ins" class="pri" hidden>Instalar como app</button></div>
   <p id="pjinfo" class="mu" style="margin:8px 0 0"></p>
 </details>
 <details open><summary>Letra e importación</summary>
@@ -128,9 +164,9 @@ dialog p{margin:6px 0;color:var(--mu)}
   <li>Cada palabra se puede corregir: texto, inicio y fin (el fin vacío llega hasta la palabra siguiente). Si escribís un espacio dentro de una palabra, se divide.</li>
   <li>Cada línea tiene <b>Voz 2</b> (cantante secundario) y <b>Fondo</b> (voz de fondo de la línea anterior, que se ve chiquita). En el cuadro de texto, una línea entre paréntesis también cuenta como fondo. Como el fondo suele sonar a la vez que la principal, primero sincronizá todo y después marcá las líneas de fondo con ◎ (vuelve el audio solo).</li>
   <li><b>Deshacer / Rehacer</b> (<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd>) vuelven atrás cualquier cambio. <b>Quitar marca</b> (<kbd>⌫</kbd>) solo borra la última marca de sincronización.</li>
-  <li><b>Onda:</b> muestra el audio con las palabras encima; arrastrá el borde de una palabra para corregir su tiempo. En cada línea, <b>− / +</b> la adelantan o atrasan en el «Paso» elegido (con <kbd>Shift</kbd>, desde esa línea hasta el final).</li>
+  <li><b>Onda:</b> muestra el audio con las palabras encima y el tiempo exacto (con milisegundos) de la reproducción y del cursor. Tocá una palabra para ajustarla: botones de ±1 y ±10 ms o escribiendo el tiempo. También podés arrastrar sus bordes. En cada línea, <b>− / +</b> la adelantan o atrasan en el «Paso» elegido (con <kbd>Shift</kbd>, desde esa línea hasta el final).</li>
   <li><b>Avisos</b> te señala palabras fuera de orden, líneas que se pisan o duraciones raras. Tocá un aviso para ir a ese lugar.</li>
-  <li><b>Proyectos:</b> cada canción se guarda aparte. Para instalarla como app hace falta abrirla desde una dirección web (mirá el LEEME del paquete).</li>
+  <li><b>Proyectos y guardado:</b> al entrar elegís el proyecto. Todo se guarda solo en este navegador (el botón <b>Guardar</b> o <kbd>Ctrl</kbd>+<kbd>S</kbd> lo fuerza). Los cambios de una casilla se guardan al salir de ella. Antes de actualizar o cambiar de navegador, usá <b>Exportar respaldo</b>. Para instalarla como app hace falta abrirla desde una dirección web (mirá el LEEME del paquete).</li>
   <li>Clic en el borde de una palabra la reproduce. <kbd>Shift</kbd> + clic mueve el cursor de sincronización ahí.</li>
 </ol></details>
 <details id="avd"><summary id="avs">Avisos</summary><div id="av"></div></details>
@@ -150,15 +186,15 @@ dialog p{margin:6px 0;color:var(--mu)}
   </div>
 </details>
 </main>
- <dialog id="dg">
-  <h2>Volviste a Lyric Sync</h2>
-  <p id="dsum"></p>
-  <p>El audio no se guarda: si seguís, tenés que volver a cargarlo.</p>
-  <div class="row">
-    <button id="go" class="pri">Seguir donde estaba</button>
-    <button id="new">Empezar uno nuevo</button>
+ <div id="pk" role="dialog" aria-modal="true" aria-labelledby="pkt" hidden>
+  <div class="pkin">
+    <h1 id="pkt">Lyric Sync <span class="mu ver" style="font:14px system-ui"></span></h1>
+    <p class="mu">Elegí un proyecto para seguir o empezá uno nuevo.</p>
+    <div id="pkl"></div>
+    <div class="pknew"><input id="pkn" type="text" maxlength="80" placeholder="Nombre de la canción nueva" aria-label="Nombre del proyecto nuevo"><button id="pkc" class="pri">Crear proyecto</button></div>
+    <div class="row"><button id="pkxb">Exportar respaldo</button><label class="btn">Importar respaldo<input id="pkb" type="file" accept=".json,application/json" hidden></label><button id="pkx" hidden>Volver</button></div>
   </div>
-</dialog>
+</div>
 <script>
 /*PURE*/
 const r3=x=>Math.round(x*1000)/1000;
@@ -252,10 +288,19 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,nTok=l=>L[l].w.length+(auto()?0:1);
 const key=l=>l.w.map(x=>x.t).join(' '),kt=l=>l.bg?'('+key(l)+')':key(l);
-const PK='lyricsync_projects';
-let PR={cur:null,list:{}};
-const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR))}catch(e){}};
-const save=()=>{if(!PR.cur||!PR.list[PR.cur])return;Object.assign(PR.list[PR.cur],{L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow,audio:audioName,upd:Date.now()});savePR()};
+const APP_VERSION='2.0',PK='lyricsync_projects';
+let PR={cur:null,list:{}},lastSer='';
+const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
+const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow,audio:audioName});
+const hora=()=>new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+function save(force){
+  if(!PR.cur||!PR.list[PR.cur])return;
+  const d=curData(),ser=JSON.stringify(d);
+  if(ser!==lastSer||force===true){
+    Object.assign(PR.list[PR.cur],d,{upd:Date.now()});const ok=savePR();if(ok)lastSer=ser;
+    $('svs').textContent=ok?'Guardado '+hora():'⚠ No se pudo guardar (el navegador bloqueó o llenó el almacenamiento). Exportá un respaldo.';
+  }
+}
 function firstOpen(){for(let i=0;i<L.length;i++)for(let j=0;j<L[i].w.length;j++)if(L[i].w[j].s==null)return{l:i,w:j};return{l:L.length,w:0}}
 
 function status(){const s=$('st');
@@ -313,7 +358,7 @@ function undo(){
 /* Teclado */
 const typing=t=>/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)&&t.type!=='checkbox';
 addEventListener('keydown',e=>{
-  if(!sync||typing(e.target))return;
+  if(!sync||typing(e.target)||!$('pk').hidden)return;
   if(e.code==='Space'){e.preventDefault();if(!e.repeat)mark()}
   else if(e.code==='Backspace'){e.preventDefault();undo()}
   else if(e.code==='Enter'){e.preventDefault();a.paused?a.play():a.pause()}
@@ -418,7 +463,7 @@ function undoH(){if(!H.length)return;R.push(snapS());restoreS(H.pop())}
 function redoH(){if(!R.length)return;H.push(snapS());restoreS(R.pop())}
 $('hu').onclick=undoH;$('hr').onclick=redoH;
 addEventListener('keydown',e=>{
-  if(!(e.ctrlKey||e.metaKey)||typing(e.target))return;const k=e.key.toLowerCase();
+  if(!(e.ctrlKey||e.metaKey)||typing(e.target)||!$('pk').hidden)return;const k=e.key.toLowerCase();
   if(k==='z'&&!e.shiftKey){e.preventDefault();undoH()}
   else if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();redoH()}
 });
@@ -437,6 +482,7 @@ function afterRender(){
   const av=$('av');av.innerHTML=IS.length?'':'<p class="mu">Sin avisos.</p>';
   IS.slice(0,100).forEach(x=>{const b=document.createElement('button');b.className='tr'+(x.soft?' mu':'');
     b.dataset.l=x.l;b.dataset.w=x.w==null?'':x.w;b.textContent=(x.soft?'ℹ ':'⚠ ')+'Línea '+(x.l+1)+': '+x.m;av.appendChild(b)});
+  updSel();
 }
 $('av').onclick=e=>{
   const b=e.target.closest('button');if(!b)return;
@@ -454,6 +500,7 @@ function pjUI(){
   const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
   $('pjs').innerHTML=ids.map(id=>'<option value="'+id+'"'+(id===PR.cur?' selected':'')+'>'+X(PR.list[id].name)+'</option>').join('');
   const p=PR.list[PR.cur];
+  $('cn').textContent=p?p.name:'Elegir proyecto';
   $('pjinfo').textContent=p&&p.audio?'Audio de este proyecto: '+p.audio+' (el audio no se guarda: hay que volver a cargarlo).':'Este proyecto todavía no tiene audio cargado.';
 }
 function openProj(id,noSave){
@@ -461,7 +508,7 @@ function openProj(id,noSave){
   PR.cur=id;const p=PR.list[id];
   L=p.L||[];$('lang').value=p.lang||'es';$('comp').value=p.comp!=null?p.comp:100;$('auto').checked=p.auto!==false;setFollow(!!p.follow);
   audioName=p.audio||'';P=firstOpen();H=[];R=[];bk=null;$('rc').hidden=true;
-  render();updH();pjUI();savePR();
+  wv.sel=null;render();updH();pjUI();savePR();lastSer=JSON.stringify(curData());$('svs').textContent='';closePicker();
 }
 $('pjs').onchange=()=>{openProj($('pjs').value);$('pjs').blur()};
 $('pjnew').onclick=()=>{const n=prompt('Nombre del proyecto nuevo','Canción nueva');if(n==null)return;openProj(newProj(n.trim()||'Sin título'))};
@@ -474,8 +521,8 @@ $('pjdel').onclick=()=>{
 };
 
 /* ===== Onda ===== */
-const PPS=100,mmss=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
-let peaks=null,wv={on:false,start:0,lt:null,drag:null,moved:false,hits:[],msg:''};
+const PPS=250,mmss=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
+let peaks=null,wv={on:false,start:0,lt:null,drag:null,moved:false,hits:[],rects:[],msg:'',sel:null,nl:null};
 const cvs=$('wv'),cx=cvs.getContext('2d');
 async function buildPeaks(file){
   peaks=null;wv.msg='Dibujando la onda…';
@@ -484,24 +531,44 @@ async function buildPeaks(file){
     const n=Math.ceil(buf.duration*PPS),pk=new Float32Array(n),chs=[],step=buf.sampleRate/PPS;
     for(let c=0;c<buf.numberOfChannels;c++)chs.push(buf.getChannelData(c));
     for(let i=0;i<n;i++){let m=0;const a0=Math.floor(i*step),a1=Math.min(buf.length,Math.floor((i+1)*step));
-      for(const d of chs)for(let k=a0;k<a1;k+=4){const v=Math.abs(d[k]);if(v>m)m=v}pk[i]=m}
+      for(const d of chs)for(let k=a0;k<a1;k+=2){const v=Math.abs(d[k]);if(v>m)m=v}pk[i]=m}
     let mx=0;for(const v of pk)if(v>mx)mx=v;if(mx)for(let i=0;i<n;i++)pk[i]/=mx;
     peaks=pk;wv.msg='';
   }catch(e){peaks=null;wv.msg='No pude dibujar la onda de este archivo (el audio funciona igual).'}
 }
+const effE=(ln,j)=>{const x=ln.w[j],nx=ln.w[j+1];return x.e!=null?x.e:(nx&&nx.s!=null?nx.s:x.s+.5)};
+const selWord=()=>{const q=wv.sel,ln=q&&L[q.l],x=ln&&ln.w[q.w];return x&&x.s!=null?x:null};
+function updSel(){
+  const wd=selWord();$('wsp').hidden=!wd;if(!wd)return;
+  const q=wv.sel;$('wsn').textContent='«'+wd.t+'» · línea '+(q.l+1);
+  if(document.activeElement!==$('wss'))$('wss').value=r3(wd.s);
+  if(document.activeElement!==$('wse')){$('wse').value=wd.e!=null?r3(wd.e):'';$('wse').placeholder=r3(effE(L[q.l],q.w))+' (auto)'}
+}
+function nudge(k,dms){
+  const wd=selWord();if(!wd)return;const q=wv.sel,now=Date.now();
+  if(!(wv.nl&&wv.nl.k===k&&wv.nl.l===q.l&&wv.nl.w===q.w&&now-wv.nl.t<1500))hist();
+  wv.nl={k,l:q.l,w:q.w,t:now};
+  if(k==='s')wd.s=Math.max(0,r3(wd.s+dms/1000));else wd.e=Math.max(0,r3(effE(L[q.l],q.w)+dms/1000));
+  render();save();
+}
+$('wsp').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(b)nudge(b.dataset.k,+b.dataset.d)});
+$('wss').onchange=()=>{const wd=selWord();if(!wd)return;const v=parseFloat($('wss').value);if(isNaN(v))return updSel();hist();wd.s=Math.max(0,r3(v));render();save()};
+$('wse').onchange=()=>{const wd=selWord();if(!wd)return;hist();const v=parseFloat($('wse').value);wd.e=isNaN(v)?null:Math.max(0,r3(v));render();save()};
+$('wsh').onclick=()=>{const wd=selWord();if(wd){a.currentTime=Math.max(0,wd.s-.3);a.play()}};
 function findHit(x,y){if(y<cvs.clientHeight*.6)return null;let best=null,bd=7;for(const h of wv.hits){const d=Math.abs(h.x-x);if(d<bd){bd=d;best=h}}return best}
 function drawWave(){
   const w=cvs.clientWidth,h=cvs.clientHeight,dpr=window.devicePixelRatio||1;
   if(cvs.width!==Math.round(w*dpr)||cvs.height!==Math.round(h*dpr)){cvs.width=Math.round(w*dpr);cvs.height=Math.round(h*dpr)}
   cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,w,h);
   const cs=getComputedStyle(document.documentElement),col=n=>cs.getPropertyValue(n).trim(),Z=+$('wz').value,t=a.currentTime;
+  $('wtm').textContent=F(t);
   if(!peaks){cx.fillStyle=col('--mu');cx.font='13px system-ui';cx.textAlign='center';cx.fillText(wv.msg||'Cargá un audio para ver la onda',w/2,h/2);return}
   const dur=peaks.length/PPS,pps=w/Z;
   if(t!==wv.lt){if(t<wv.start||t>wv.start+Z*.85)wv.start=t-Z*.15;wv.lt=t}
   wv.start=Math.max(0,Math.min(wv.start,Math.max(0,dur-Z)));
-  const X0=q=>(q-wv.start)*pps,mid=h*.3,amp=h*.28,ts=Z<=8?1:Z<=15?2:Z<=30?5:10;
+  const X0=q=>(q-wv.start)*pps,mid=h*.3,amp=h*.28,ts=Z<=2?.25:Z<=4?.5:Z<=8?1:Z<=15?2:Z<=30?5:10;
   cx.font='10px ui-monospace,monospace';cx.textAlign='left';
-  for(let k=Math.ceil(wv.start/ts)*ts;k<wv.start+Z;k+=ts){const x=X0(k);cx.fillStyle=col('--ln');cx.fillRect(x,0,1,h);cx.fillStyle=col('--mu');cx.fillText(mmss(k),x+3,10)}
+  for(let k=Math.ceil(wv.start/ts)*ts;k<wv.start+Z;k+=ts){const x=X0(k);cx.fillStyle=col('--ln');cx.fillRect(x,0,1,h);cx.fillStyle=col('--mu');cx.fillText(ts<1?F(k).slice(3):mmss(k),x+3,10)}
   cx.fillStyle=col('--mu');cx.globalAlpha=.6;cx.beginPath();
   for(let px=0;px<w;px++){
     const i0=Math.floor((wv.start+px/pps)*PPS),i1=Math.max(i0+1,Math.floor((wv.start+(px+1)/pps)*PPS));let m=0;
@@ -509,33 +576,38 @@ function drawWave(){
     if(m>0)cx.rect(px,mid-m*amp,1,Math.max(1,m*amp*2));
   }
   cx.fill();cx.globalAlpha=1;
-  const ly=h*.64,lh=h*.32;wv.hits=[];
+  const ly=h*.64,lh=h*.32;wv.hits=[];wv.rects=[];
   L.forEach((ln,i)=>ln.w.forEach((x,j)=>{
     if(x.s==null)return;
-    const nx=ln.w[j+1],ex=x.e!=null||!nx||nx.s==null,e=x.e!=null?x.e:(nx&&nx.s!=null?nx.s:x.s+.5),x1=X0(x.s),x2=X0(e);
+    const nx=ln.w[j+1],ex=x.e!=null||!nx||nx.s==null,e=effE(ln,j),x1=X0(x.s),x2=X0(e);
     if(x2<-5||x1>w+5)return;
     const on=t>=x.s&&t<e;
     cx.globalAlpha=ln.bg?.45:.85;cx.fillStyle=on?col('--on'):ln.v===2?col('--v2'):col('--ac');
     cx.fillRect(x1+.5,ly,Math.max(2,x2-x1-1),lh);cx.globalAlpha=1;
     if(x2-x1>20){cx.save();cx.beginPath();cx.rect(x1,ly,x2-x1,lh);cx.clip();cx.fillStyle=on?col('--onx'):ln.v===2?'#fff':col('--acx');cx.font='11px system-ui';cx.textAlign='left';cx.fillText(x.t,x1+4,ly+lh*.62);cx.restore()}
-    wv.hits.push({x:x1,k:'s',l:i,w:j});if(ex)wv.hits.push({x:x2,k:'e',l:i,w:j});
+    wv.rects.push({x1,x2,l:i,w:j});wv.hits.push({x:x1,k:'s',l:i,w:j});if(ex)wv.hits.push({x:x2,k:'e',l:i,w:j});
   }));
+  const sr=wv.sel&&wv.rects.find(r=>r.l===wv.sel.l&&r.w===wv.sel.w);
+  if(sr){cx.strokeStyle=col('--tx');cx.lineWidth=1.5;cx.strokeRect(sr.x1+.5,ly,Math.max(2,sr.x2-sr.x1-1),lh)}
   cx.fillStyle=col('--tx');cx.fillRect(X0(t)-.5,0,1.5,h);
 }
 const wpos=e=>{const r=cvs.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+const wtime=x=>Math.max(0,wv.start+x/(cvs.clientWidth/(+$('wz').value)));
 cvs.addEventListener('pointerdown',e=>{
   const{x,y}=wpos(e),hit=findHit(x,y);
-  if(hit){wv.drag=hit;wv.moved=false;cvs.setPointerCapture(e.pointerId)}
-  else if(peaks)a.currentTime=Math.max(0,wv.start+x/(cvs.clientWidth/(+$('wz').value)));
+  if(hit){wv.sel={l:hit.l,w:hit.w};wv.drag=hit;wv.moved=false;cvs.setPointerCapture(e.pointerId);updSel();return}
+  if(y>=cvs.clientHeight*.6){const r=wv.rects.find(r=>x>=r.x1&&x<=r.x2);if(r){wv.sel={l:r.l,w:r.w};updSel()}}
+  if(peaks)a.currentTime=wtime(x);
 });
 cvs.addEventListener('pointermove',e=>{
-  const{x,y}=wpos(e);
+  const{x,y}=wpos(e);$('whv').textContent=peaks?F(wtime(x)):'—';
   if(wv.drag){
     if(!wv.moved){hist();wv.moved=true}
-    const d=wv.drag,t=Math.max(0,r3(wv.start+x/(cvs.clientWidth/(+$('wz').value)))),wd=L[d.l]&&L[d.l].w[d.w];
-    if(wd){if(d.k==='s')wd.s=t;else wd.e=t}
+    const d=wv.drag,t=r3(wtime(x)),wd=L[d.l]&&L[d.l].w[d.w];
+    if(wd){if(d.k==='s')wd.s=t;else wd.e=t;updSel()}
   }else cvs.style.cursor=findHit(x,y)?'ew-resize':'pointer';
 });
+cvs.addEventListener('pointerleave',()=>{if(!wv.drag)$('whv').textContent='—'});
 cvs.addEventListener('pointerup',()=>{if(wv.drag){wv.drag=null;if(wv.moved){render();save()}wv.moved=false}});
 cvs.addEventListener('wheel',e=>{e.preventDefault();wv.start=Math.max(0,wv.start+(e.deltaY+e.deltaX)/cvs.clientWidth*(+$('wz').value))},{passive:false});
 $('wt').onclick=()=>{wv.on=!wv.on;$('wt').setAttribute('aria-pressed',wv.on);$('wvb').hidden=!wv.on;$('wt').blur()};
@@ -556,23 +628,77 @@ $('wz').onchange=()=>$('wz').blur();
   requestAnimationFrame(loop);
 })();
 
+/* ===== Selector de proyecto (pantalla completa) ===== */
+function pkRender(){
+  const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd),box=$('pkl');box.innerHTML='';
+  if(!ids.length)box.innerHTML='<p class="mu">Todavía no tenés proyectos. Creá el primero abajo.</p>';
+  ids.forEach((id,i)=>{
+    const p=PR.list[id],Lp=p.L||[],nw=Lp.reduce((n,l)=>n+l.w.length,0),nt=Lp.reduce((n,l)=>n+l.w.filter(x=>x.s!=null).length,0),pct=nw?Math.round(nt/nw*100):0;
+    const d=document.createElement('div');d.className='pc';
+    d.innerHTML='<button class="pco" data-id="'+id+'"><span class="nm">'+X(p.name)+(i===0?' · último usado':'')+'</span><span class="m2">'+Lp.length+' líneas · '+pct+'% con tiempo · '+new Date(p.upd).toLocaleString('es',{dateStyle:'medium',timeStyle:'short'})+(p.audio?' · '+X(p.audio):'')+'</span><span class="b2"><i style="width:'+pct+'%"></i></span></button><button class="pcd" data-id="'+id+'" title="Borrar proyecto" aria-label="Borrar proyecto">✕</button>';
+    box.appendChild(d);
+  });
+  $('pkx').hidden=!PR.cur;
+}
+function openPicker(forced){pkRender();$('pk').hidden=false;document.body.style.overflow='hidden';$('pkx').hidden=!!forced||!PR.cur;$('pkn').value='';const f=$('pkl').querySelector('.pco');(f||$('pkn')).focus()}
+function closePicker(){$('pk').hidden=true;document.body.style.overflow=''}
+function pkCreate(){openProj(newProj($('pkn').value.trim()||'Sin título'))}
+$('chg').onclick=()=>{save();openPicker(false)};
+$('pkx').onclick=closePicker;
+$('pkc').onclick=pkCreate;
+$('pkn').addEventListener('keydown',e=>{if(e.key==='Enter')pkCreate()});
+$('pkl').onclick=e=>{
+  const b=e.target.closest('button');if(!b)return;const id=b.dataset.id;
+  if(b.classList.contains('pco')){if(id===PR.cur)closePicker();else openProj(id)}
+  else if(b.classList.contains('pcd')){
+    const p=PR.list[id];if(!confirm('¿Borrar el proyecto «'+p.name+'»? No se puede deshacer.'))return;
+    delete PR.list[id];if(id===PR.cur){PR.cur=null;L=[];P={l:0,w:0};H=[];R=[];render();updH();pjUI()}
+    savePR();pkRender();
+  }
+};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('pk').hidden&&!$('pkx').hidden)closePicker()});
+
+/* ===== Respaldo ===== */
+function exportBackup(){
+  save(true);
+  const o={app:'lyric-sync',version:APP_VERSION,exported:new Date().toISOString(),projects:Object.keys(PR.list).map(id=>Object.assign({id},PR.list[id]))};
+  dl('lyric-sync-respaldo-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(o),'application/json');
+}
+async function importBackup(f){
+  let o;try{o=JSON.parse(await f.text())}catch(e){return alert('Ese archivo no es un respaldo válido.')}
+  if(!o||o.app!=='lyric-sync'||!Array.isArray(o.projects))return alert('Ese archivo no es un respaldo de Lyric Sync.');
+  let add=0,skip=0;
+  o.projects.forEach(q=>{
+    if(!q||!Array.isArray(q.L))return;
+    const id=q.id,rest=Object.assign({},q);delete rest.id;
+    const ex=id&&PR.list[id];
+    if(ex&&JSON.stringify(ex.L)===JSON.stringify(rest.L)){skip++;return}
+    const nid=ex||!id?uid():id;
+    PR.list[nid]=Object.assign({name:'Sin título',lang:'es',comp:100,auto:true,follow:false,audio:'',upd:Date.now()},rest,ex?{name:(rest.name||'Sin título')+' (importado)'}:{});add++;
+  });
+  savePR();pjUI();if(!$('pk').hidden)pkRender();
+  alert(add+' proyecto'+(add===1?'':'s')+' importado'+(add===1?'':'s')+(skip?' · '+skip+' ya estaba'+(skip===1?'':'n'):'')+'.');
+}
+const pickBackup=e=>{const f=e.target.files[0];e.target.value='';if(f)importBackup(f)};
+$('bkx').onclick=exportBackup;$('pkxb').onclick=exportBackup;$('bki').onchange=pickBackup;$('pkb').onchange=pickBackup;
+
+/* ===== Guardar ===== */
+$('sv').onclick=()=>{if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();save(true)};
+addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();if($('pk').hidden){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();save(true)}}});
+setInterval(()=>save(),15000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save()});
+addEventListener('pagehide',()=>save());
+
 /* ===== Inicio ===== */
+$('ver').textContent='v'+APP_VERSION;document.querySelectorAll('.ver').forEach(e=>e.textContent='v'+APP_VERSION);
 try{PR=JSON.parse(localStorage.getItem(PK)||'null')||PR}catch(e){}
-if(!PR.list||!Object.keys(PR.list).length){
-  PR={cur:null,list:{}};let old=null;
-  try{old=JSON.parse(localStorage.getItem('lyricsync')||'null')}catch(e){}
-  PR.cur=newProj('Proyecto 1',old&&old.L&&old.L.length?{L:old.L,lang:old.lang||'es',comp:old.comp!=null?old.comp:100,auto:old.auto!==false,follow:!!old.follow}:{});
-}else if(!PR.list[PR.cur])PR.cur=Object.keys(PR.list)[0];
-render();pjUI();
-const cur=PR.list[PR.cur];
-if(cur.L&&cur.L.length){
-  const dg=$('dg'),nw=cur.L.reduce((n,l)=>n+l.w.length,0),nt=cur.L.reduce((n,l)=>n+l.w.filter(x=>x.s!=null).length,0);
-  $('dsum').textContent='Proyecto «'+cur.name+'»: '+cur.L.length+' líneas, '+nt+' de '+nw+' palabras con tiempo.';
-  dg.addEventListener('cancel',e=>e.preventDefault());
-  $('go').onclick=()=>{openProj(PR.cur,true);dg.close()};
-  $('new').onclick=()=>{openProj(newProj('Proyecto '+(Object.keys(PR.list).length+1)),true);dg.close()};
-  dg.showModal();
-}else openProj(PR.cur,true);
+if(!PR.list)PR={cur:null,list:{}};
+if(!Object.keys(PR.list).length){
+  let old=null;try{old=JSON.parse(localStorage.getItem('lyricsync')||'null')}catch(e){}
+  if(old&&old.L&&old.L.length)newProj('Proyecto 1',{L:old.L,lang:old.lang||'es',comp:old.comp!=null?old.comp:100,auto:old.auto!==false,follow:!!old.follow});
+}
+PR.cur=null;
+render();pjUI();openPicker(true);
 
 /* ===== Instalar como app (solo si se abre desde una dirección web) ===== */
 if(/^https?:$/.test(location.protocol)){
