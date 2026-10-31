@@ -95,6 +95,22 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 .pcd:hover{color:var(--wn)}
 .pknew{display:flex;gap:10px;margin:20px 0 6px}
 .pknew input{flex:1;font-size:16px;padding:.55em .8em}
+.rem{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--pn);border:1px solid var(--ln);border-left:4px solid var(--on);border-radius:12px;padding:10px 14px;margin:12px 0}
+.ln.splitting .w{cursor:crosshair;box-shadow:0 0 0 2px var(--ac)}
+.ln.splitting .w input{pointer-events:none}
+.meta button[aria-pressed=true][data-a=split]{background:var(--ac);color:var(--acx)}
+#kp{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;--kf:var(--ac);--kd:color-mix(in srgb,var(--tx) 30%,transparent)}
+.kpt,.kpb{display:flex;align-items:center;gap:12px;padding:12px 20px}
+.kpt .sep{flex:1}
+#kpl{flex:1;overflow:auto;padding:32vh 6vw}
+.kl{font:700 clamp(26px,4.6vw,54px)/1.25 Georgia,"Iowan Old Style",serif;margin:.4em 0;opacity:.45;cursor:pointer;transition:opacity .25s}
+.kl.now{opacity:1}.kl.past{opacity:.3}
+.kl.v2{text-align:right;--kf:var(--v2)}
+.kl.bg{font-size:.55em;font-style:italic;margin-left:1.4em;margin-top:-.2em}
+.kw{--p:0%;background:linear-gradient(90deg,var(--kf) var(--p),var(--kd) var(--p));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.kl.past .kw{--p:100%}
+#kpg{flex:1;height:4px;background:var(--ln);border-radius:2px;overflow:hidden}
+#kpgi{display:block;height:100%;width:0;background:var(--ac)}
 dialog{background:var(--pn);color:var(--tx);border:1px solid var(--ln);border-radius:18px;padding:22px 24px;max-width:420px}
 dialog::backdrop{background:rgba(0,0,0,.6)}
 dialog h2{margin:0 0 6px;font:italic 700 22px Georgia,serif}
@@ -117,6 +133,8 @@ dialog p{margin:6px 0;color:var(--mu)}
     <button id="un" disabled>Quitar marca <kbd>⌫</kbd></button>
     <button id="fl" class="tg" aria-pressed="false" title="Mientras suena la canción, la pantalla baja sola siguiendo la letra">Seguir la letra</button>
     <button id="wt" class="tg" aria-pressed="false" title="Muestra la onda del audio con las palabras encima">Onda</button>
+    <button id="hold" class="tg" aria-pressed="false" title="Si lo activás: mantené la tecla (o el botón) mientras suena la palabra y soltala cuando termina. Marca inicio y fin de una vez.">Mantener presionado</button>
+    <button id="kpo" title="Ver la letra como en un reproductor, a pantalla completa">Vista previa</button>
     <button id="hu" disabled title="Deshacer el último cambio">↶ Deshacer <kbd>Ctrl Z</kbd></button>
     <button id="hr" disabled title="Rehacer">↷ Rehacer</button>
     <span class="sep"></span>
@@ -131,17 +149,19 @@ dialog p{margin:6px 0;color:var(--mu)}
       <span>Suena en <b id="wtm" class="mono">00:00.000</b></span>
       <span>Cursor <b id="whv" class="mono">—</b></span>
       <span class="mu">Clic: ir a ese punto · arrastrá un borde · rueda: desplazar</span>
+      <label class="mu"><input id="wsnap" type="checkbox" checked> Imán a golpes de voz <span style="opacity:.7">(Alt: sin imán)</span></label>
       <label class="mu">Zoom <select id="wz"><option value="2">2 s</option><option value="4">4 s</option><option value="8">8 s</option><option value="15" selected>15 s</option><option value="30">30 s</option><option value="60">60 s</option></select></label>
     </div>
     <div id="wsp" class="wvc" hidden>
       <b id="wsn"></b>
-      <span class="grp">Inicio <button data-k="s" data-d="-10">−10</button><button data-k="s" data-d="-1">−1</button><input id="wss" type="number" step="0.001" aria-label="Inicio en segundos"><button data-k="s" data-d="1">+1</button><button data-k="s" data-d="10">+10</button></span>
-      <span class="grp">Fin <button data-k="e" data-d="-10">−10</button><button data-k="e" data-d="-1">−1</button><input id="wse" type="number" step="0.001" aria-label="Fin en segundos"><button data-k="e" data-d="1">+1</button><button data-k="e" data-d="10">+10</button></span>
+      <span class="grp">Inicio <button data-k="s" data-d="-10">−10</button><button data-k="s" data-d="-1">−1</button><input id="wss" type="number" step="0.001" aria-label="Inicio en segundos"><button data-k="s" data-d="1">+1</button><button data-k="s" data-d="10">+10</button><button data-k="s" data-snap="1" title="Pegar al golpe de voz más cercano">⌖</button></span>
+      <span class="grp">Fin <button data-k="e" data-d="-10">−10</button><button data-k="e" data-d="-1">−1</button><input id="wse" type="number" step="0.001" aria-label="Fin en segundos"><button data-k="e" data-d="1">+1</button><button data-k="e" data-d="10">+10</button><button data-k="e" data-snap="1" title="Pegar al golpe de voz más cercano">⌖</button></span>
       <button id="wsh">▶ Oír</button><span class="mu">botones en milisegundos · casillas en segundos</span>
     </div>
   </div>
 </div>
 <main>
+<div id="rem" class="rem" hidden></div>
 <details open id="pj"><summary>Proyectos</summary>
   <div class="row"><select id="pjs" aria-label="Proyecto"></select><button id="pjnew">Nuevo</button><button id="pjdup">Duplicar</button><button id="pjren">Renombrar</button><button id="pjdel">Borrar</button><button id="bkx" title="Guarda todos tus proyectos en un archivo">Exportar respaldo</button><label class="btn" title="Recupera proyectos desde un respaldo">Importar respaldo<input id="bki" type="file" accept=".json,application/json" hidden></label><button id="ins" class="pri" hidden>Instalar como app</button></div>
   <p id="pjinfo" class="mu" style="margin:8px 0 0"></p>
@@ -164,13 +184,18 @@ dialog p{margin:6px 0;color:var(--mu)}
   <li>Cada palabra se puede corregir: texto, inicio y fin (el fin vacío llega hasta la palabra siguiente). Si escribís un espacio dentro de una palabra, se divide.</li>
   <li>Cada línea tiene <b>Voz 2</b> (cantante secundario) y <b>Fondo</b> (voz de fondo de la línea anterior, que se ve chiquita). En el cuadro de texto, una línea entre paréntesis también cuenta como fondo. Como el fondo suele sonar a la vez que la principal, primero sincronizá todo y después marcá las líneas de fondo con ◎ (vuelve el audio solo).</li>
   <li><b>Deshacer / Rehacer</b> (<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd>) vuelven atrás cualquier cambio. <b>Quitar marca</b> (<kbd>⌫</kbd>) solo borra la última marca de sincronización.</li>
-  <li><b>Onda:</b> muestra el audio con las palabras encima y el tiempo exacto (con milisegundos) de la reproducción y del cursor. Tocá una palabra para ajustarla: botones de ±1 y ±10 ms o escribiendo el tiempo. También podés arrastrar sus bordes. En cada línea, <b>− / +</b> la adelantan o atrasan en el «Paso» elegido (con <kbd>Shift</kbd>, desde esa línea hasta el final).</li>
+  <li><b>Onda:</b> muestra el audio con las palabras encima y el tiempo exacto (con milisegundos) de la reproducción y del cursor. Tocá una palabra para ajustarla: botones de ±1 y ±10 ms o escribiendo el tiempo. También podés arrastrar sus bordes (se pegan a los golpes de voz; con <kbd>Alt</kbd> no). En cada línea, <b>− / +</b> la adelantan o atrasan en el «Paso» elegido (con <kbd>Shift</kbd>, desde esa línea hasta el final).</li>
   <li><b>Avisos</b> te señala palabras fuera de orden, líneas que se pisan o duraciones raras. Tocá un aviso para ir a ese lugar.</li>
   <li><b>Proyectos y guardado:</b> al entrar elegís el proyecto. Todo se guarda solo en este navegador (el botón <b>Guardar</b> o <kbd>Ctrl</kbd>+<kbd>S</kbd> lo fuerza). Los cambios de una casilla se guardan al salir de ella. Antes de actualizar o cambiar de navegador, usá <b>Exportar respaldo</b>. Para instalarla como app hace falta abrirla desde una dirección web (mirá el LEEME del paquete).</li>
+  <li><b>Mantener presionado</b> (botón de la barra, apagado por defecto): con él activo, la tecla o el botón de marcar funcionan como «mantener»: al apretar marcas el inicio de la palabra y al soltar marcas su fin.</li>
+  <li><b>Líneas:</b> cada línea tiene <b>Dividir</b> (después tocá la palabra donde empieza la línea nueva), <b>Unir ↑</b> (la suma a la anterior) y <b>＋↑ / ＋↓</b> (línea nueva arriba o abajo, sin tocar las demás; escribí varias palabras separadas por espacio y se reparten solas). Abajo hay «Agregar línea al final».</li>
+  <li><b>Vista previa:</b> muestra la letra a pantalla completa, iluminándose como en un reproductor. Clic en una línea para ir a ella.</li>
+  <li><b>Respaldo:</b> si pasa una semana sin exportar uno, la app te lo recuerda (podés posponerlo 3 días).</li>
   <li>Clic en el borde de una palabra la reproduce. <kbd>Shift</kbd> + clic mueve el cursor de sincronización ahí.</li>
 </ol></details>
 <details id="avd"><summary id="avs">Avisos</summary><div id="av"></div></details>
 <div id="ls"></div>
+<div class="row"><button id="addl" title="Agrega una línea nueva sin tocar las demás">＋ Agregar línea al final</button></div>
 <details open><summary>Exportar y herramientas</summary>
   <div class="row">
     <label class="mu">Idioma <input id="lang" type="text" value="es" style="width:54px"></label>
@@ -186,10 +211,16 @@ dialog p{margin:6px 0;color:var(--mu)}
   </div>
 </details>
 </main>
- <div id="pk" role="dialog" aria-modal="true" aria-labelledby="pkt" hidden>
+ <div id="kp" role="dialog" aria-modal="true" aria-label="Vista previa de la letra" hidden>
+  <div class="kpt"><b id="kpn"></b><span class="sep"></span><button id="kpf" title="Pantalla completa del navegador">⛶</button><button id="kpx" title="Cerrar (Esc)">✕ Cerrar</button></div>
+  <div id="kpl"></div>
+  <div class="kpb"><button id="kpp" class="pri">▶</button><div id="kpg"><i id="kpgi"></i></div><span id="kpm" class="mono mu">00:00.000</span></div>
+</div>
+<div id="pk" role="dialog" aria-modal="true" aria-labelledby="pkt" hidden>
   <div class="pkin">
     <h1 id="pkt">Lyric Sync <span class="mu ver" style="font:14px system-ui"></span></h1>
     <p class="mu">Elegí un proyecto para seguir o empezá uno nuevo.</p>
+    <div id="pkr" class="rem" hidden></div>
     <div id="pkl"></div>
     <div class="pknew"><input id="pkn" type="text" maxlength="80" placeholder="Nombre de la canción nueva" aria-label="Nombre del proyecto nuevo"><button id="pkc" class="pri">Crear proyecto</button></div>
     <div class="row"><button id="pkxb">Exportar respaldo</button><label class="btn">Importar respaldo<input id="pkb" type="file" accept=".json,application/json" hidden></label><button id="pkx" hidden>Volver</button></div>
@@ -286,9 +317,9 @@ function parseTTML(x){const d=new DOMParser().parseFromString(x,'application/xml
 
 const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
-const CAP=1.2,auto=()=>$('auto').checked,nTok=l=>L[l].w.length+(auto()?0:1);
+const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map(x=>x.t).join(' '),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='2.0',PK='lyricsync_projects';
+const APP_VERSION='2.1',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow,audio:audioName});
@@ -304,25 +335,26 @@ function save(force){
 function firstOpen(){for(let i=0;i<L.length;i++)for(let j=0;j<L[i].w.length;j++)if(L[i].w[j].s==null)return{l:i,w:j};return{l:L.length,w:0}}
 
 function status(){const s=$('st');
+  if(splitL!=null){s.textContent='Tocá la palabra donde empieza la línea nueva (Esc cancela).';return}
   if(!L.length){s.textContent='Pegá una letra para empezar';return}
   if(!sync){s.textContent='Sincronización apagada: activá Sincronizar para marcar palabras con la barra espaciadora.';return}
   if(P.l>=L.length){s.textContent='Fin de la letra';return}
   const ln=L[P.l];
-  s.textContent=(P.w<ln.w.length?'Siguiente: «'+ln.w[P.w].t+'»':'Marcá el fin de la línea')+' · línea '+(P.l+1)+' de '+L.length}
+  s.textContent=(P.w<ln.w.length?'Siguiente: «'+ln.w[P.w].t+'»':'Marcá el fin de la línea')+' · línea '+(P.l+1)+' de '+L.length+(holdMode?' · mantené presionado hasta que termine la palabra':'')}
 
 function render(){
   const box=$('ls');box.innerHTML='';chips=[];
   L.forEach((ln,i)=>{
     const row=document.createElement('div');row.className='ln';
     row.innerHTML=`<div class="ctl"><button data-a="play" data-l="${i}" title="Reproducir esta línea">▶</button><button data-a="here" data-l="${i}" title="Sincronizar desde esta línea">◎</button><button data-a="del" data-l="${i}" title="Borrar línea">✕</button></div>`;
-    row.className='ln'+(ln.v===2?' v2':'')+(ln.bg?' bg':'');
+    row.className='ln'+(ln.v===2?' v2':'')+(ln.bg?' bg':'')+(splitL===i?' splitting':'');
     const ws=document.createElement('div');ws.className='ws';chips[i]=[];
     const mt=document.createElement('div');mt.className='meta';
-    mt.innerHTML=`<button data-a="v" data-l="${i}" aria-pressed="${ln.v===2}" title="Cantante secundario">Voz 2</button><button data-a="bg" data-l="${i}" aria-pressed="${!!ln.bg}" ${i===0?'disabled':''} title="Voz de fondo de la línea anterior">Fondo</button><span class="mu">mover</span><button data-a="sh" data-d="-1" title="Adelantar la línea (Shift: hasta el final)">−</button><button data-a="sh" data-d="1" title="Atrasar la línea (Shift: hasta el final)">+</button>`;
+    mt.innerHTML=`<button data-a="v" data-l="${i}" aria-pressed="${ln.v===2}" title="Cantante secundario">Voz 2</button><button data-a="bg" data-l="${i}" aria-pressed="${!!ln.bg}" ${i===0?'disabled':''} title="Voz de fondo de la línea anterior">Fondo</button><span class="mu">mover</span><button data-a="sh" data-d="-1" title="Adelantar la línea (Shift: hasta el final)">−</button><button data-a="sh" data-d="1" title="Atrasar la línea (Shift: hasta el final)">+</button><button data-a="split" data-l="${i}" aria-pressed="${splitL===i}" title="Dividir esta línea en dos">Dividir</button><button data-a="join" data-l="${i}" ${i===0?'disabled':''} title="Unir con la línea anterior">Unir ↑</button><button data-a="addu" data-l="${i}" title="Línea nueva arriba">＋↑</button><button data-a="addd" data-l="${i}" title="Línea nueva abajo">＋↓</button>`;
     ws.appendChild(mt);
     ln.w.forEach((x,j)=>{
       const c=document.createElement('div'),nx=ln.w[j+1];
-      c.className='w'+(x.s==null?' un':'')+(sync&&P.l===i&&P.w===j?' cur':'')+(sync&&!auto()&&P.l===i&&P.w===ln.w.length&&j===ln.w.length-1?' curend':'');
+      c.className='w'+(x.s==null?' un':'')+(sync&&P.l===i&&P.w===j?' cur':'')+(sync&&!noEnd()&&P.l===i&&P.w===ln.w.length&&j===ln.w.length-1?' curend':'');
       c.dataset.l=i;c.dataset.w=j;
       c.innerHTML=`<input class="tx" value="${X(x.t)}" style="width:${Math.max(9,x.t.length+1)}ch" aria-label="Palabra"><input class="s" type="number" step="0.01" placeholder="inicio" value="${x.s==null?'':r3(x.s)}" aria-label="Inicio (s)"><input class="e" type="number" step="0.01" placeholder="${nx&&nx.s!=null?'auto':'fin'}" value="${x.e==null?'':r3(x.e)}" aria-label="Fin (s)">`;
       ws.appendChild(c);chips[i][j]=c;
@@ -339,8 +371,8 @@ function mark(){
   hist();
   const ln=L[P.l],n=ln.w.length,t=Math.max(0,a.currentTime-$('comp').value/1000);
   if(P.w<n){const x=ln.w[P.w];x.s=t;x.e=null;
-    if(P.w===0&&P.l>0&&auto()&&!ln.bg){const pv=L[P.l-1].w[L[P.l-1].w.length-1];if(pv.s!=null&&t>pv.s)pv.e=Math.min(t,pv.s+CAP)}
-    if(P.w===n-1&&auto()){x.e=t+CAP;P={l:P.l+1,w:0}}else P.w++;
+    if(P.w===0&&P.l>0&&auto()&&!holdMode&&!ln.bg){const pv=L[P.l-1].w[L[P.l-1].w.length-1];if(pv.s!=null&&t>pv.s)pv.e=Math.min(t,pv.s+CAP)}
+    if(P.w===n-1&&noEnd()){x.e=t+CAP;P={l:P.l+1,w:0}}else P.w++;
   }else{ln.w[n-1].e=t;P={l:P.l+1,w:0}}
   render();save();
 }
@@ -358,17 +390,18 @@ function undo(){
 /* Teclado */
 const typing=t=>/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)&&t.type!=='checkbox';
 addEventListener('keydown',e=>{
-  if(!sync||typing(e.target)||!$('pk').hidden)return;
-  if(e.code==='Space'){e.preventDefault();if(!e.repeat)mark()}
+  if(!sync||typing(e.target)||modal())return;
+  if(e.code==='Space'){e.preventDefault();if(!e.repeat)pressMark()}
   else if(e.code==='Backspace'){e.preventDefault();undo()}
   else if(e.code==='Enter'){e.preventDefault();a.paused?a.play():a.pause()}
   else if(e.code==='ArrowLeft'||e.code==='ArrowRight'){e.preventDefault();a.currentTime=Math.max(0,a.currentTime+(e.code==='ArrowLeft'?-3:3))}
 },true);
-addEventListener('keyup',e=>{if(sync&&e.code==='Space'&&!typing(e.target))e.preventDefault()},true);
+addEventListener('keyup',e=>{if(e.code==='Space')markEnd();if(sync&&e.code==='Space'&&!typing(e.target))e.preventDefault()},true);
 
 /* Barra */
 $('sy').onclick=()=>{sync=!sync;$('sy').setAttribute('aria-pressed',sync);$('sy').textContent=sync?'Sincronizando':'Sincronizar';$('mk').disabled=$('un').disabled=!sync;document.activeElement.blur();if(sync&&P.l>=L.length)P=firstOpen();render()};
-$('mk').addEventListener('pointerdown',e=>{e.preventDefault();mark()});
+$('mk').addEventListener('pointerdown',e=>{e.preventDefault();pressMark()});
+['pointerup','pointerleave','pointercancel'].forEach(ev=>$('mk').addEventListener(ev,()=>markEnd()));
 $('un').onclick=undo;
 let follow=false,lastLine=-1;
 const setFollow=v=>{follow=v;$('fl').setAttribute('aria-pressed',v);lastLine=-1};
@@ -433,11 +466,16 @@ $('ls').addEventListener('click',e=>{
     else if(b.dataset.a==='v'){hist();L[i].v=L[i].v===2?1:2;render();save()}
     else if(b.dataset.a==='bg'){hist();L[i].bg=!L[i].bg;render();save()}
     else if(b.dataset.a==='sh'){hist();shiftFrom(i,(+b.dataset.d)*((+$('stp').value)||50)/1000,e.shiftKey)}
+    else if(b.dataset.a==='split'){splitL=splitL===i?null:i;render()}
+    else if(b.dataset.a==='join'){doJoin(i)}
+    else if(b.dataset.a==='addu'){addLine(i,i)}
+    else if(b.dataset.a==='addd'){addLine(i+1,i)}
     else{hist();L.splice(i,1);P=firstOpen();render();save()}
     return;
   }
   if(!c)return;
   const l=+c.dataset.l,w=+c.dataset.w;
+  if(splitL!=null&&l===splitL){if(w>0){hist();doSplit(l,w);splitL=null;render();save()}return}
   if(e.shiftKey){P={l,w};render()}
   else if(!e.target.matches('input')){const x=L[l].w[w];if(x.s!=null){a.currentTime=Math.max(0,x.s-.3);a.play()}}
 });
@@ -463,7 +501,7 @@ function undoH(){if(!H.length)return;R.push(snapS());restoreS(H.pop())}
 function redoH(){if(!R.length)return;H.push(snapS());restoreS(R.pop())}
 $('hu').onclick=undoH;$('hr').onclick=redoH;
 addEventListener('keydown',e=>{
-  if(!(e.ctrlKey||e.metaKey)||typing(e.target)||!$('pk').hidden)return;const k=e.key.toLowerCase();
+  if(!(e.ctrlKey||e.metaKey)||typing(e.target)||modal())return;const k=e.key.toLowerCase();
   if(k==='z'&&!e.shiftKey){e.preventDefault();undoH()}
   else if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();redoH()}
 });
@@ -501,7 +539,7 @@ function pjUI(){
   $('pjs').innerHTML=ids.map(id=>'<option value="'+id+'"'+(id===PR.cur?' selected':'')+'>'+X(PR.list[id].name)+'</option>').join('');
   const p=PR.list[PR.cur];
   $('cn').textContent=p?p.name:'Elegir proyecto';
-  $('pjinfo').textContent=p&&p.audio?'Audio de este proyecto: '+p.audio+' (el audio no se guarda: hay que volver a cargarlo).':'Este proyecto todavía no tiene audio cargado.';
+  $('pjinfo').textContent=(p&&p.audio?'Audio de este proyecto: '+p.audio+' (el audio no se guarda: hay que volver a cargarlo).':'Este proyecto todavía no tiene audio cargado.')+' Último respaldo: '+(getMeta().last?new Date(getMeta().last).toLocaleDateString('es'):'nunca')+'.';
 }
 function openProj(id,noSave){
   if(!noSave&&PR.cur&&PR.list[PR.cur])save();
@@ -522,7 +560,7 @@ $('pjdel').onclick=()=>{
 
 /* ===== Onda ===== */
 const PPS=250,mmss=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
-let peaks=null,wv={on:false,start:0,lt:null,drag:null,moved:false,hits:[],rects:[],msg:'',sel:null,nl:null};
+let onsets=[],peaks=null,wv={on:false,start:0,lt:null,drag:null,moved:false,hits:[],rects:[],msg:'',sel:null,nl:null};
 const cvs=$('wv'),cx=cvs.getContext('2d');
 async function buildPeaks(file){
   peaks=null;wv.msg='Dibujando la onda…';
@@ -533,8 +571,33 @@ async function buildPeaks(file){
     for(let i=0;i<n;i++){let m=0;const a0=Math.floor(i*step),a1=Math.min(buf.length,Math.floor((i+1)*step));
       for(const d of chs)for(let k=a0;k<a1;k+=2){const v=Math.abs(d[k]);if(v>m)m=v}pk[i]=m}
     let mx=0;for(const v of pk)if(v>mx)mx=v;if(mx)for(let i=0;i<n;i++)pk[i]/=mx;
-    peaks=pk;wv.msg='';
+    peaks=pk;onsets=findOnsets(pk);wv.msg='';
   }catch(e){peaks=null;wv.msg='No pude dibujar la onda de este archivo (el audio funciona igual).'}
+}
+function findOnsets(pk){
+  const n=pk.length,sm=new Float32Array(n),on=[],K=Math.round(.04*PPS),B=PPS;
+  for(let i=0;i<n;i++){let q=0,c=0;for(let k=-2;k<=2;k++){const j=i+k;if(j>=0&&j<n){q+=pk[j];c++}}sm[i]=q/c}
+  const bm=new Float32Array(Math.ceil(n/B)+1);
+  for(let i=0;i<n;i++){const b=(i/B)|0;if(sm[i]>bm[b])bm[b]=sm[i]}
+  const rise=new Float32Array(n);for(let i=K;i<n;i++)rise[i]=sm[i]-sm[i-K];
+  let last=-1;
+  for(let i=K+1;i<n-1;i++){
+    const b=(i/B)|0,lm=Math.max(bm[b],bm[b-1]||0,bm[b+1]||0);
+    if(rise[i]>Math.max(.03,.22*lm)&&rise[i]>=rise[i-1]&&rise[i]>=rise[i+1]){
+      let j=i-K;while(j>0&&j>i-4*K&&sm[j-1]<sm[j])j--;
+      const t=j/PPS;if(t-last>.08){on.push(t);last=t}
+    }
+  }
+  return on;
+}
+function snapT(t,tol){
+  let lo=0,hi=onsets.length;while(lo<hi){const m=(lo+hi)>>1;if(onsets[m]<t)lo=m+1;else hi=m}
+  let best=null,bd=tol;for(const k of [lo-1,lo]){if(k>=0&&k<onsets.length){const d=Math.abs(onsets[k]-t);if(d<=bd){bd=d;best=onsets[k]}}}
+  return best==null?t:r3(best);
+}
+function snapSel(k){
+  const wd=selWord();if(!wd||!onsets.length)return;const q=wv.sel,t0=k==='s'?wd.s:effE(L[q.l],q.w),t1=snapT(t0,.3);
+  if(t1===t0)return;hist();if(k==='s')wd.s=t1;else wd.e=t1;render();save();
 }
 const effE=(ln,j)=>{const x=ln.w[j],nx=ln.w[j+1];return x.e!=null?x.e:(nx&&nx.s!=null?nx.s:x.s+.5)};
 const selWord=()=>{const q=wv.sel,ln=q&&L[q.l],x=ln&&ln.w[q.w];return x&&x.s!=null?x:null};
@@ -551,7 +614,7 @@ function nudge(k,dms){
   if(k==='s')wd.s=Math.max(0,r3(wd.s+dms/1000));else wd.e=Math.max(0,r3(effE(L[q.l],q.w)+dms/1000));
   render();save();
 }
-$('wsp').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(b)nudge(b.dataset.k,+b.dataset.d)});
+$('wsp').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(b){if(b.dataset.snap)snapSel(b.dataset.k);else nudge(b.dataset.k,+b.dataset.d)}});
 $('wss').onchange=()=>{const wd=selWord();if(!wd)return;const v=parseFloat($('wss').value);if(isNaN(v))return updSel();hist();wd.s=Math.max(0,r3(v));render();save()};
 $('wse').onchange=()=>{const wd=selWord();if(!wd)return;hist();const v=parseFloat($('wse').value);wd.e=isNaN(v)?null:Math.max(0,r3(v));render();save()};
 $('wsh').onclick=()=>{const wd=selWord();if(wd){a.currentTime=Math.max(0,wd.s-.3);a.play()}};
@@ -577,6 +640,7 @@ function drawWave(){
   }
   cx.fill();cx.globalAlpha=1;
   const ly=h*.64,lh=h*.32;wv.hits=[];wv.rects=[];
+  if($('wsnap').checked){cx.fillStyle=col('--on');cx.globalAlpha=.75;for(const o of onsets){if(o<wv.start)continue;if(o>wv.start+Z)break;cx.fillRect(X0(o)-.5,ly-7,1,7)}cx.globalAlpha=1}
   L.forEach((ln,i)=>ln.w.forEach((x,j)=>{
     if(x.s==null)return;
     const nx=ln.w[j+1],ex=x.e!=null||!nx||nx.s==null,e=effE(ln,j),x1=X0(x.s),x2=X0(e);
@@ -603,7 +667,7 @@ cvs.addEventListener('pointermove',e=>{
   const{x,y}=wpos(e);$('whv').textContent=peaks?F(wtime(x)):'—';
   if(wv.drag){
     if(!wv.moved){hist();wv.moved=true}
-    const d=wv.drag,t=r3(wtime(x)),wd=L[d.l]&&L[d.l].w[d.w];
+    const d=wv.drag,tt=r3(wtime(x)),t=($('wsnap').checked&&!e.altKey)?snapT(tt,Math.min(.06,12*(+$('wz').value)/cvs.clientWidth)):tt,wd=L[d.l]&&L[d.l].w[d.w];
     if(wd){if(d.k==='s')wd.s=t;else wd.e=t;updSel()}
   }else cvs.style.cursor=findHit(x,y)?'ew-resize':'pointer';
 });
@@ -625,8 +689,99 @@ $('wz').onchange=()=>$('wz').blur();
   if(follow&&!a.paused&&on.length){const n=+on[0].dataset.l;
     if(n!==lastLine){lastLine=n;on[0].closest('.ln').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'})}}
   if(wv.on)drawWave();
+  if(!$('kp').hidden)kpTick();
   requestAnimationFrame(loop);
 })();
+
+/* ===== Marcar con «mantener presionado» ===== */
+let holdMode=false,hd=null;
+const modal=()=>!$('pk').hidden||!$('kp').hidden;
+function pressMark(){holdMode?markStart():mark()}
+function markStart(){
+  if(P.l>=L.length)return;
+  const l=P.l,w=P.w,isWord=w<L[l].w.length;
+  mark();hd=isWord?{l,w,t:L[l].w[w].s}:null;
+}
+function markEnd(){
+  if(!hd)return;const q=hd;hd=null;
+  const x=L[q.l]&&L[q.l].w[q.w];if(!x||x.s!==q.t)return;
+  const t=Math.max(0,a.currentTime-$('comp').value/1000);
+  if(t-q.t>=.05){x.e=r3(t);render();save()}
+}
+addEventListener('blur',()=>markEnd());
+$('hold').onclick=()=>{holdMode=!holdMode;$('hold').setAttribute('aria-pressed',holdMode);$('hold').blur();render()};
+
+/* ===== Dividir, unir y crear líneas ===== */
+let splitL=null;
+function doSplit(i,w){
+  const ln=L[i],a1=ln.w.slice(0,w),b1=ln.w.slice(w),la=a1[a1.length-1];
+  if(la.e==null&&b1[0].s!=null)la.e=b1[0].s;
+  ln.w=a1;L.splice(i+1,0,{w:b1,v:ln.v||1,bg:!!ln.bg});P=firstOpen();
+}
+function doJoin(i){if(i<1)return;hist();const pv=L[i-1];pv.w=pv.w.concat(L[i].w);L.splice(i,1);P=firstOpen();render();save()}
+function addLine(pos,ref){
+  hist();const r=L[ref]||L[L.length-1];
+  L.splice(pos,0,{w:[{t:'…',s:null,e:null}],v:(r&&r.v)||1,bg:false});P=firstOpen();render();save();
+  const c=chips[pos]&&chips[pos][0],inp=c&&c.querySelector('.tx');
+  if(inp){inp.scrollIntoView({block:'center'});inp.focus();inp.select()}
+}
+$('addl').onclick=()=>addLine(L.length,L.length-1);
+addEventListener('keydown',e=>{if(e.key==='Escape'&&splitL!=null){splitL=null;render()}});
+
+/* ===== Recordatorio de respaldo ===== */
+const MK='lyricsync_meta';
+const getMeta=()=>{try{return JSON.parse(localStorage.getItem(MK)||'{}')}catch(e){return{}}};
+const setMeta=o=>{try{localStorage.setItem(MK,JSON.stringify(Object.assign(getMeta(),o)))}catch(e){}};
+function remDue(){
+  const m=getMeta(),now=Date.now(),DAY=864e5;
+  if(!Object.values(PR.list).some(q=>(q.L||[]).some(l=>l.w.some(x=>x.s!=null))))return null;
+  if(m.snooze&&now<m.snooze)return null;
+  const ref=m.last||m.first||now;
+  return now-ref>7*DAY?{d:Math.floor((now-ref)/DAY),never:!m.last}:null;
+}
+function remRender(){
+  const r=remDue();
+  ['rem','pkr'].forEach(id=>{const el=$(id);el.hidden=!r;
+    if(r)el.innerHTML='<span>'+(r.never?'Todavía no exportaste ningún respaldo de tus proyectos.':'Hace '+r.d+' días que no exportás un respaldo.')+'</span><button data-r="now" class="pri">Exportar ahora</button><button data-r="later">Recordármelo en 3 días</button>'});
+}
+const remClick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.r==='now')exportBackup();else{setMeta({snooze:Date.now()+3*864e5});remRender()}};
+$('rem').onclick=remClick;$('pkr').onclick=remClick;
+
+/* ===== Vista previa (pantalla completa) ===== */
+const kp={lines:[],focus:-1};
+function kpBuild(){
+  const box=$('kpl');box.innerHTML='';kp.lines=[];
+  L.forEach((ln,i)=>{
+    const tw=tm(ln),el=document.createElement('div'),base='kl'+(ln.v===2?' v2':'')+(ln.bg?' bg':''),ws=[];
+    el.className=base+' fut';el.dataset.i=i;
+    ln.w.forEach((x,j)=>{const sp=document.createElement('span');sp.className='kw';sp.textContent=x.t;el.appendChild(sp);el.appendChild(document.createTextNode(' '));
+      ws.push({el:sp,s:x.s,e:x.s!=null?effE(ln,j):null})});
+    kp.lines.push({el,ws,base,st:'fut',bg:!!ln.bg,s0:tw.length?tw[0].s:null,e0:tw.length?Math.max(...tw.map(z=>z.e)):null});
+    box.appendChild(el);
+  });
+}
+function kpTick(){
+  const t=a.currentTime;let focus=-1,lastPast=-1;
+  kp.lines.forEach((q,i)=>{
+    const st=q.s0==null||t<q.s0?'fut':t>q.e0?'past':'now';
+    if(st!==q.st){q.st=st;q.el.className=q.base+' '+st;if(st!=='now')q.ws.forEach(w=>w.el.style.removeProperty('--p'))}
+    if(st==='now'){
+      q.ws.forEach(w=>{if(w.s==null)return;const p=Math.max(0,Math.min(1,(t-w.s)/Math.max(.001,w.e-w.s)));w.el.style.setProperty('--p',(p*100).toFixed(1)+'%')});
+      if(!q.bg&&focus<0)focus=i;
+    }else if(st==='past'&&!q.bg)lastPast=i;
+  });
+  if(focus<0)focus=lastPast;
+  if(focus<0)focus=kp.lines.findIndex(q=>!q.bg&&q.s0!=null);
+  if(focus>=0&&focus!==kp.focus){kp.focus=focus;const box=$('kpl');box.scrollTo({top:kp.lines[focus].el.offsetTop-box.clientHeight*.35,behavior:'smooth'})}
+  $('kpgi').style.width=a.duration?(t/a.duration*100)+'%':'0';$('kpm').textContent=F(t);$('kpp').textContent=a.paused?'▶':'⏸';
+}
+function kpClose(){$('kp').hidden=true;document.body.style.overflow='';try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
+$('kpo').onclick=()=>{kpBuild();kp.focus=-1;$('kpn').textContent=PR.cur&&PR.list[PR.cur]?PR.list[PR.cur].name:'';$('kp').hidden=false;document.body.style.overflow='hidden';$('kpp').focus()};
+$('kpx').onclick=kpClose;
+$('kpp').onclick=()=>{a.paused?a.play():a.pause()};
+$('kpf').onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():$('kp').requestFullscreen()}catch(e){}};
+$('kpl').onclick=e=>{const el=e.target.closest('.kl'),q=el&&kp.lines[+el.dataset.i];if(q&&q.s0!=null)a.currentTime=Math.max(0,q.s0-.3)};
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('kp').hidden)kpClose()});
 
 /* ===== Selector de proyecto (pantalla completa) ===== */
 function pkRender(){
@@ -663,6 +818,7 @@ function exportBackup(){
   save(true);
   const o={app:'lyric-sync',version:APP_VERSION,exported:new Date().toISOString(),projects:Object.keys(PR.list).map(id=>Object.assign({id},PR.list[id]))};
   dl('lyric-sync-respaldo-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(o),'application/json');
+  setMeta({last:Date.now(),snooze:0});remRender();pjUI();
 }
 async function importBackup(f){
   let o;try{o=JSON.parse(await f.text())}catch(e){return alert('Ese archivo no es un respaldo válido.')}
@@ -698,7 +854,8 @@ if(!Object.keys(PR.list).length){
   if(old&&old.L&&old.L.length)newProj('Proyecto 1',{L:old.L,lang:old.lang||'es',comp:old.comp!=null?old.comp:100,auto:old.auto!==false,follow:!!old.follow});
 }
 PR.cur=null;
-render();pjUI();openPicker(true);
+if(!getMeta().first)setMeta({first:Date.now()});
+remRender();render();pjUI();openPicker(true);
 
 /* ===== Instalar como app (solo si se abre desde una dirección web) ===== */
 if(/^https?:$/.test(location.protocol)){
