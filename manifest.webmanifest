@@ -1,0 +1,31 @@
+{
+  "name": "Lyric Sync",
+  "short_name": "Lyric Sync",
+  "description": "Editor de letras sincronizadas palabra por palabra (LRC y TTML)",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#102c26",
+  "theme_color": "#102c26",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
