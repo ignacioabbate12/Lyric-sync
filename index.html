@@ -219,7 +219,7 @@ dialog p{margin:6px 0;color:var(--mu)}
 <main>
 <div id="rem" class="rem" hidden></div>
 <details open id="pj"><summary>Proyectos</summary>
-  <div class="row"><select id="pjs" aria-label="Proyecto"></select><button id="pjnew">Nuevo</button><button id="pjdup">Duplicar</button><button id="pjren">Renombrar</button><button id="pjdel">Borrar</button><button id="bkx" title="Guarda todos tus proyectos en un archivo">Exportar respaldo</button><label class="btn" title="Recupera proyectos desde un respaldo">Importar respaldo<input id="bki" type="file" accept=".json,application/json" hidden></label><button id="ins" class="pri" hidden>Instalar como app</button></div>
+  <div class="row"><select id="pjs" aria-label="Proyecto"></select><button id="pjnew">Nuevo</button><button id="pjdup">Duplicar</button><button id="pjren">Renombrar</button><button id="pjdel">Borrar</button><button id="audx" title="Quita el audio guardado de este proyecto (la letra y los tiempos no se tocan)">Quitar audio</button><button id="bkx" title="Guarda todos tus proyectos en un archivo (sin los audios)">Exportar respaldo</button><label class="btn" title="Recupera proyectos desde un respaldo">Importar respaldo<input id="bki" type="file" accept=".json,application/json" hidden></label><button id="ins" class="pri" hidden>Instalar como app</button></div>
   <p id="pjinfo" class="mu" style="margin:8px 0 0"></p>
 </details>
 <details open><summary>Letra e importación</summary>
@@ -242,7 +242,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <li><b>Deshacer / Rehacer</b> (<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd>) vuelven atrás cualquier cambio. <b>Quitar marca</b> (<kbd>⌫</kbd>) solo borra la última marca de sincronización.</li>
   <li><b>Onda:</b> muestra el audio con las palabras encima y el tiempo exacto (con milisegundos) de la reproducción y del cursor. Tocá una palabra para ajustarla: botones de ±1 y ±10 ms o escribiendo el tiempo. También podés arrastrar sus bordes (se pegan a los golpes de voz; con <kbd>Alt</kbd> no). En cada línea, <b>− / +</b> la adelantan o atrasan en el «Paso» elegido (con <kbd>Shift</kbd>, desde esa línea hasta el final).</li>
   <li><b>Avisos</b> te señala palabras fuera de orden, líneas que se pisan o duraciones raras. Tocá un aviso para ir a ese lugar.</li>
-  <li><b>Proyectos y guardado:</b> al entrar elegís el proyecto. Todo se guarda solo en este navegador (el botón <b>Guardar</b> o <kbd>Ctrl</kbd>+<kbd>S</kbd> lo fuerza). Los cambios de una casilla se guardan al salir de ella. Antes de actualizar o cambiar de navegador, usá <b>Exportar respaldo</b>. Para instalarla como app hace falta abrirla desde una dirección web (mirá el LEEME del paquete).</li>
+  <li><b>Proyectos y guardado:</b> al entrar elegís el proyecto. Todo se guarda solo en este navegador, incluido el audio de cada proyecto (se carga solo al abrirlo; el respaldo no lo incluye) (el botón <b>Guardar</b> o <kbd>Ctrl</kbd>+<kbd>S</kbd> lo fuerza). Los cambios de una casilla se guardan al salir de ella. Antes de actualizar o cambiar de navegador, usá <b>Exportar respaldo</b>. Para instalarla como app hace falta abrirla desde una dirección web (mirá el LEEME del paquete).</li>
   <li><b>Mantener presionado</b> (botón de la barra, apagado por defecto): con él activo, la tecla o el botón de marcar funcionan como «mantener»: al apretar marcas el inicio de la palabra y al soltar marcas su fin.</li>
   <li><b>Líneas:</b> cada línea tiene <b>Dividir</b> (después tocá la palabra donde empieza la línea nueva), <b>Unir ↑</b> (la suma a la anterior) y <b>＋↑ / ＋↓</b> (línea nueva arriba o abajo, sin tocar las demás; escribí varias palabras separadas por espacio y se reparten solas). Abajo hay «Agregar línea al final».</li>
   <li><b>Vista previa:</b> imita el estilo de Spicy Lyrics con los valores de su código (relleno de cada palabra, efecto por letra en las palabras de 1 s o más, brillo, desenfoque según la distancia, puntos en las pausas largas y fondo animado). Tiene tres estilos y se puede apagar el desenfoque. Clic en una línea para ir a ella. Sin audio, tiene un play de prueba.</li>
@@ -395,10 +395,10 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='2.4',PK='lyricsync_projects';
+const APP_VERSION='2.5',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
-const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow,audio:audioName});
+const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
 const hora=()=>new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 function save(force){
   if(!PR.cur||!PR.list[PR.cur])return;
@@ -492,7 +492,12 @@ $('auto').onchange=()=>{$('auto').blur();render();save()};
 $('comp').onchange=save;$('lang').onchange=save;
 $('sp').onchange=()=>{a.playbackRate=+$('sp').value;$('sp').blur()};
 a.onloadedmetadata=()=>{a.playbackRate=+$('sp').value};
-$('af').onchange=e=>{const f=e.target.files[0];if(!f)return;if(audioURL)URL.revokeObjectURL(audioURL);audioURL=URL.createObjectURL(f);a.src=audioURL;audioName=f.name;save();pjUI();buildPeaks(f);e.target.value=''};
+$('af').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;e.target.value='';const id=PR.cur;
+  setAudio(f,f.name);
+  if(id&&PR.list[id]){PR.list[id].audio=f.name;PR.list[id].asv=false;savePR();storeAudio(id,f)}
+  pjUI();
+};
 
 /* Letra */
 let bk=null;
@@ -634,22 +639,26 @@ function pjUI(){
   $('pjs').innerHTML=ids.map(id=>'<option value="'+id+'"'+(id===PR.cur?' selected':'')+'>'+X(PR.list[id].name)+'</option>').join('');
   const p=PR.list[PR.cur];
   $('cn').textContent=p?p.name:'Elegir proyecto';
-  $('pjinfo').textContent=(p&&p.audio?'Audio de este proyecto: '+p.audio+' (el audio no se guarda: hay que volver a cargarlo).':'Este proyecto todavía no tiene audio cargado.')+' Último respaldo: '+(getMeta().last?new Date(getMeta().last).toLocaleDateString('es'):'nunca')+'.';
+  $('pjinfo').textContent=(p&&p.audio?(p.asv?'Audio guardado con este proyecto: '+p.audio+(p.asz?' ('+(p.asz/1048576).toFixed(1)+' MB)':'')+'. Se carga solo al abrirlo.':'Este proyecto usaba «'+p.audio+'», pero no quedó guardado: volvé a cargarlo con «Cargar audio».'):'Este proyecto todavía no tiene audio: cargalo con «Cargar audio» y queda guardado con el proyecto.')+' Último respaldo: '+(getMeta().last?new Date(getMeta().last).toLocaleDateString('es'):'nunca')+'.';
 }
 function openProj(id,noSave){
   if(!noSave&&PR.cur&&PR.list[PR.cur])save();
   PR.cur=id;const p=PR.list[id];
   L=p.L||[];$('lang').value=p.lang||'es';$('comp').value=p.comp!=null?p.comp:100;$('auto').checked=p.auto!==false;setFollow(!!p.follow);
   audioName=p.audio||'';P=firstOpen();H=[];R=[];bk=null;$('rc').hidden=true;
-  wv.sel=null;render();updH();pjUI();savePR();lastSer=JSON.stringify(curData());$('svs').textContent='';closePicker();
+  wv.sel=null;render();updH();pjUI();savePR();lastSer=JSON.stringify(curData());$('svs').textContent='';closePicker();restoreAudio(id);
 }
 $('pjs').onchange=()=>{openProj($('pjs').value);$('pjs').blur()};
 $('pjnew').onclick=()=>{const n=prompt('Nombre del proyecto nuevo','Canción nueva');if(n==null)return;openProj(newProj(n.trim()||'Sin título'));unloadAudio();pjUI()};
-$('pjdup').onclick=()=>{save();const p=PR.list[PR.cur];openProj(newProj(p.name+' (copia)',Object.assign(JSON.parse(JSON.stringify(p)),{name:p.name+' (copia)'})))};
+$('pjdup').onclick=async()=>{
+  save();const old=PR.cur,p=PR.list[old],nid=newProj(p.name+' (copia)',Object.assign(JSON.parse(JSON.stringify(p)),{name:p.name+' (copia)'}));
+  if(p.asv){try{const r=await adbGet(old);if(r)await adbSet(nid,r);else PR.list[nid].asv=false}catch(e){PR.list[nid].asv=false}}
+  openProj(nid);
+};
 $('pjren').onclick=()=>{const p=PR.list[PR.cur],n=prompt('Nuevo nombre',p.name);if(n&&n.trim()){p.name=n.trim();savePR();pjUI()}};
 $('pjdel').onclick=()=>{
   const p=PR.list[PR.cur];if(!confirm('¿Borrar el proyecto «'+p.name+'»? No se puede deshacer.'))return;
-  delete PR.list[PR.cur];PR.cur=null;const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
+  adbDel(PR.cur).catch(()=>{});delete PR.list[PR.cur];PR.cur=null;const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
   openProj(ids.length?ids[0]:newProj('Proyecto 1'),true);
 };
 
@@ -818,6 +827,51 @@ function unloadAudio(){
 /* Si el reproductor queda enfocado, el espacio lo pausaría; con Sincronizar prendido le sacamos el foco */
 const unfocusAudio=()=>setTimeout(()=>{if(!sync)return;a.blur();const ae=document.activeElement;if(ae&&ae!==document.body&&ae.blur)ae.blur()},0);
 a.addEventListener('pointerup',unfocusAudio);a.addEventListener('focus',()=>{if(sync)a.blur()});a.addEventListener('keyup',unfocusAudio);
+
+/* ===== Audio guardado por proyecto (IndexedDB) ===== */
+let adb=null;
+function adbOpen(){
+  return adb||(adb=new Promise((res,rej)=>{
+    try{const r=indexedDB.open('lyricsync_audio',1);r.onupgradeneeded=()=>r.result.createObjectStore('a');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}
+    catch(e){rej(e)}
+  }));
+}
+async function adbTx(mode,fn){
+  const db=await adbOpen();
+  return new Promise((res,rej)=>{const t=db.transaction('a',mode),rq=fn(t.objectStore('a'));t.oncomplete=()=>res(rq&&rq.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)});
+}
+const adbGet=id=>adbTx('readonly',s=>s.get(id)),adbSet=(id,rec)=>adbTx('readwrite',s=>s.put(rec,id)),adbDel=id=>adbTx('readwrite',s=>s.delete(id));
+function setAudio(blob,name){
+  if(audioURL)URL.revokeObjectURL(audioURL);
+  audioURL=URL.createObjectURL(blob);a.src=audioURL;audioName=name;buildPeaks(blob);
+}
+async function storeAudio(id,f){
+  try{
+    await adbSet(id,{blob:f,name:f.name,size:f.size,type:f.type});
+    if(PR.list[id]){Object.assign(PR.list[id],{audio:f.name,asv:true,asz:f.size});savePR()}
+    try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+    pjUI();note('Audio guardado con el proyecto ('+(f.size/1048576).toFixed(1)+' MB). Se va a cargar solo al abrirlo.');
+  }catch(e){
+    if(PR.list[id]){PR.list[id].asv=false;savePR()}
+    pjUI();note('No pude guardar el audio dentro del navegador (puede estar bloqueado o sin espacio): la próxima vez hay que cargarlo de nuevo.');
+  }
+}
+async function restoreAudio(id){
+  unloadAudio();const p=PR.list[id];if(!p)return;audioName=p.audio||'';
+  if(!p.asv)return;
+  try{
+    const r=await adbGet(id);if(PR.cur!==id)return;
+    if(r&&r.blob){setAudio(r.blob,r.name||p.audio||'audio');pjUI()}
+    else{p.asv=false;savePR();pjUI()}
+  }catch(e){if(PR.cur===id)note('No pude leer el audio guardado de este proyecto: volvé a cargarlo.')}
+}
+$('audx').onclick=async()=>{
+  const id=PR.cur,p=id&&PR.list[id];if(!p)return;
+  if(!p.audio&&!p.asv&&!a.getAttribute('src')){note('Este proyecto no tiene audio.');return}
+  if(!confirm('¿Quitar el audio de este proyecto? La letra y los tiempos no se tocan.'))return;
+  try{await adbDel(id)}catch(e){}
+  p.audio='';p.asv=false;delete p.asz;unloadAudio();savePR();pjUI();note('Audio quitado del proyecto.');
+};
 
 /* ===== Selección de líneas, duplicar, mover y partes de palabra ===== */
 let wantScroll=false,selLast=null,dragIdx=null;
@@ -1120,7 +1174,7 @@ function pkRender(){
   ids.forEach((id,i)=>{
     const p=PR.list[id],Lp=p.L||[],nw=Lp.reduce((n,l)=>n+l.w.length,0),nt=Lp.reduce((n,l)=>n+l.w.filter(x=>x.s!=null).length,0),pct=nw?Math.round(nt/nw*100):0;
     const d=document.createElement('div');d.className='pc';
-    d.innerHTML='<button class="pco" data-id="'+id+'"><span class="nm">'+X(p.name)+(i===0?' · último usado':'')+'</span><span class="m2">'+Lp.length+' líneas · '+pct+'% con tiempo · '+new Date(p.upd).toLocaleString('es',{dateStyle:'medium',timeStyle:'short'})+(p.audio?' · '+X(p.audio):'')+'</span><span class="b2"><i style="width:'+pct+'%"></i></span></button><button class="pcd" data-id="'+id+'" title="Borrar proyecto" aria-label="Borrar proyecto">✕</button>';
+    d.innerHTML='<button class="pco" data-id="'+id+'"><span class="nm">'+X(p.name)+(i===0?' · último usado':'')+'</span><span class="m2">'+Lp.length+' líneas · '+pct+'% con tiempo · '+new Date(p.upd).toLocaleString('es',{dateStyle:'medium',timeStyle:'short'})+(p.audio?' · '+X(p.audio)+(p.asv?' (guardado)':''):'')+'</span><span class="b2"><i style="width:'+pct+'%"></i></span></button><button class="pcd" data-id="'+id+'" title="Borrar proyecto" aria-label="Borrar proyecto">✕</button>';
     box.appendChild(d);
   });
   $('pkx').hidden=!PR.cur;
@@ -1137,7 +1191,7 @@ $('pkl').onclick=e=>{
   if(b.classList.contains('pco')){if(id===PR.cur)closePicker();else openProj(id)}
   else if(b.classList.contains('pcd')){
     const p=PR.list[id];if(!confirm('¿Borrar el proyecto «'+p.name+'»? No se puede deshacer.'))return;
-    delete PR.list[id];if(id===PR.cur){PR.cur=null;L=[];P={l:0,w:0};H=[];R=[];render();updH();pjUI()}
+    adbDel(id).catch(()=>{});delete PR.list[id];if(id===PR.cur){unloadAudio();PR.cur=null;L=[];P={l:0,w:0};H=[];R=[];render();updH();pjUI()}
     savePR();pkRender();
   }
 };
@@ -1160,7 +1214,7 @@ async function importBackup(f){
     const ex=id&&PR.list[id];
     if(ex&&JSON.stringify(ex.L)===JSON.stringify(rest.L)){skip++;return}
     const nid=ex||!id?uid():id;
-    PR.list[nid]=Object.assign({name:'Sin título',lang:'es',comp:100,auto:true,follow:false,audio:'',upd:Date.now()},rest,ex?{name:(rest.name||'Sin título')+' (importado)'}:{});add++;
+    PR.list[nid]=Object.assign({name:'Sin título',lang:'es',comp:100,auto:true,follow:false,audio:'',upd:Date.now()},rest,ex?{name:(rest.name||'Sin título')+' (importado)'}:{});PR.list[nid].asv=false;add++;
   });
   savePR();pjUI();if(!$('pk').hidden)pkRender();
   alert(add+' proyecto'+(add===1?'':'s')+' importado'+(add===1?'':'s')+(skip?' · '+skip+' ya estaba'+(skip===1?'':'n'):'')+'.');
