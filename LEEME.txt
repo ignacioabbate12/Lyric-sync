@@ -1,0 +1,52 @@
+LYRIC SYNC v2.7 - como instalarla como app
+===========================================
+
+Esta carpeta tiene la app (index.html) y lo necesario para instalarla:
+manifest.webmanifest, sw.js e iconos. Los navegadores solo dejan instalar
+una app cuando se abre desde una direccion web, no con doble clic.
+(Si solo queres usarla, el archivo lyric-sync.html sigue funcionando con doble clic.)
+
+OPCION A: en tu computadora (necesita Python instalado: python.org)
+  Windows: doble clic en  iniciar-windows.bat
+  Mac:     doble clic en  iniciar-mac.command
+           (la primera vez: clic derecho > Abrir; si no abre, en Terminal: chmod +x iniciar-mac.command)
+  Se abre http://127.0.0.1:8080/ en tu navegador. Deja la ventana negra abierta mientras la uses.
+
+OPCION B: en internet, gratis (GitHub Pages), sin dejar ventanas abiertas
+  1. Crea una cuenta en github.com y un repositorio publico nuevo.
+  2. Subi los archivos de esta carpeta (index.html, manifest.webmanifest, sw.js y los dos .png).
+  3. En Settings > Pages elegi la rama principal y guarda.
+  4. Abri la direccion que te da (https://TU-USUARIO.github.io/NOMBRE/).
+  Tus letras y proyectos se guardan solo en tu navegador, no en internet.
+
+INSTALAR
+  Con la app abierta desde la opcion A o B, aparece el boton "Instalar como app"
+  dentro de la seccion Proyectos (o el icono de instalar en la barra de direcciones
+  de Chrome o Edge). Despues se abre como un programa con su icono.
+
+COMO ACTUALIZAR
+  Reemplaza los archivos de esta carpeta por los nuevos (todos, con los mismos nombres)
+  y recarga con Ctrl+Shift+R. La version aparece al lado del titulo dentro de la app
+  (por ejemplo "v2.0"). Si usas GitHub Pages, sube los archivos nuevos al repositorio.
+  ANTES de actualizar o de borrar datos del navegador, usa "Exportar respaldo" (seccion
+  Proyectos, o en la pantalla de inicio). Es un solo archivo .json con todos tus proyectos;
+  se recupera con "Importar respaldo", incluso en otro navegador o en el celular.
+
+SINCRONIZACION AUTOMATICA (beta)
+  Con la letra pegada y el audio cargado, la seccion "Sincronizacion automatica" escucha la
+  cancion en el navegador (Whisper) y propone el tiempo de cada palabra. La PRIMERA vez
+  descarga el modelo (200 a 600 MB) y necesita internet; despues queda guardado y no hace
+  falta conexion. Es un borrador: las palabras que no reconocio se marcan con borde amarillo
+  discontinuo para que las revises. Ctrl+Z lo deshace de una vez.
+  Modelos: Turbo (~1,5 GB) es el que mejor reconoce el canto, pero necesita un navegador con
+  WebGPU (Chrome o Edge actualizados) y una placa de video; Small (~600 MB) y Base (~200 MB)
+  funcionan en cualquier computadora pero reconocen bastante peor. Si el resultado es flojo,
+  probar las opciones avanzadas de a una.
+
+IMPORTANTE
+  - Los proyectos se guardan por direccion: lo que guardaste abriendo el archivo con
+    doble clic NO aparece en la version instalada (y viceversa). Para pasar una letra,
+    exporta el .ttml o el .lrc e importalo.
+  - El audio que cargues queda guardado dentro de cada proyecto (en el navegador) y se carga
+    solo al abrir el proyecto. El respaldo (.json) NO incluye los audios: si cambias de
+    navegador o de computadora, hay que volver a cargarlos.
