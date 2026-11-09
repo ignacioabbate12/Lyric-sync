@@ -168,6 +168,7 @@ main{padding-bottom:110px}
 #selbar button{padding:.25em .8em;font-size:13px}
 .w.ai:not(.un){border-top-color:var(--on);border-top-style:dashed}
 .w.ai2:not(.un){border-top-color:var(--on);border-top-style:dotted}
+.w.ai3:not(.un){border-top-color:var(--wn);border-top-style:dashed}
 #aud-sec details{background:transparent;padding:6px 0;margin:6px 0}
 #aubar{height:6px;background:var(--ln);border-radius:3px;overflow:hidden;margin-top:10px}
 #aubi{display:block;height:100%;width:0;background:var(--ac);transition:width .2s}
@@ -250,8 +251,10 @@ dialog p{margin:6px 0;color:var(--mu)}
   <div class="row">
     <label class="mu"><input id="auk" type="checkbox" checked> No tocar las palabras que ya tienen tiempo</label>
     <label class="mu"><input id="aus2" type="checkbox" checked> Ajustar a golpes de voz</label>
+    <label class="mu"><input id="aus3" type="checkbox" checked> Dejar pausas donde el audio se calla</label>
+    <label class="mu" title="Escucha la canción 3 veces con ajustes distintos y combina los resultados: rescata palabras que una pasada no oyó y marca las dudosas"><input id="aupr" type="checkbox"> <b>Modo preciso</b> (3 pasadas combinadas, tarda unas 3 veces más)</label>
   </div>
-  <details><summary class="mu">Opciones avanzadas (si el resultado es flojo, probalas de a una)</summary>
+  <details><summary class="mu">Opciones avanzadas (con el modo preciso no se usan: cada pasada trae las suyas)</summary>
     <div class="row">
       <label class="mu"><input id="aufx" type="checkbox"> Realzar la voz antes de analizar (filtro de graves y agudos)</label>
       <label class="mu"><input id="aush" type="checkbox"> Ventanas más cortas (15 s en vez de 30 s)</label>
@@ -281,6 +284,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <li><b>Duplicar</b> copia una línea (sin tiempos, para marcarla de nuevo). <b>Arrastrá</b> el agarre ⠿ de una línea para ponerla en otro lugar (si hay varias seleccionadas, van juntas); también están los botones ↑ ↓.</li>
   <li><b>Partes de una palabra:</b> para que una parte dure más sin dejar un espacio, poné el cursor dentro de la palabra y tocá ✂ (o escribí <kbd>can|ción</kbd>). Cada parte tiene su propio tiempo. El botón ⌒ pega o separa una parte de la anterior.</li>
   <li><b>Sincronización automática:</b> con la letra pegada y el audio cargado, tocá «Sincronizar automáticamente». Las palabras que el modelo no reconoció quedan con borde amarillo discontinuo (estimadas) o punteado (ubicadas por posición) para que las revises. El modelo Turbo es el que mejor reconoce el canto.</li>
+  <li><b>Modo preciso:</b> escucha la canción tres veces con ajustes distintos y combina las pasadas (mediana por palabra). Rescata palabras que una pasada no oyó y marca con borde rojo discontinuo las dudosas, donde las pasadas no coinciden: son las que conviene revisar primero.</li>
   <li>Clic en el borde de una palabra la reproduce. <kbd>Shift</kbd> + clic mueve el cursor de sincronización ahí.</li>
 </ol></details>
 <details id="avd"><summary id="avs">Avisos</summary><div id="av"></div></details>
@@ -458,28 +462,57 @@ function alignWords(lw,aw){
   for(let q=1;q<n;q++){if(res[q].s<res[q-1].s+.01)res[q].s=res[q-1].s+.01;if(res[q].e<res[q].s)res[q].e=res[q].s+.15}
   return{res,matched:anchors.length,near:res.filter(r=>r.src==='near').length,total:n};
 }
-/* Aplica el resultado a la letra (L). Devuelve estadísticas y las listas de palabras aproximadas */
-function applyAlign(L,chunks,opt){
-  opt=opt||{};
+/* Alinea UNA pasada del modelo con la letra: devuelve un resultado por palabra de la letra */
+function alignRun(lw,idx,chunks){
   const aw=chunks.map(c=>({n:normW(c.t||''),s:+c.s,e:c.e==null?NaN:+c.e})).filter(w=>w.n&&isFinite(w.s)).map(w=>({n:w.n,s:w.s,e:isFinite(w.e)?w.e:w.s+.3}));
-  const refs=[];L.forEach(ln=>{if(ln.bg)return;ln.w.forEach(x=>refs.push({ln,x}))});
-  const lw=refs.map(r=>normW(r.x.t)),idx=lw.map((w,i)=>i).filter(i=>lw[i].length);
   const al=alignWords(idx.map(i=>lw[i]),aw);
   if(!al||!al.res)return null;
-  const full=new Array(refs.length).fill(null);idx.forEach((i,k)=>{full[i]=al.res[k]});
+  const full=new Array(lw.length).fill(null);idx.forEach((i,k)=>{full[i]=al.res[k]});
   for(let i=0;i<full.length;i++)if(!full[i]){let pv=null;for(let k=i-1;k>=0;k--)if(full[k]){pv=full[k];break}
     const nx=full.slice(i+1).find(f=>f);const t=pv?pv.e:(nx?nx.s:0);full[i]={s:t,e:t+.2,src:'interp'}}
-  const est=[],near=[],touched=[];let matched=0,kept=0;
+  full.asrCount=aw.length;
+  return full;
+}
+/* Combina varias pasadas: cada palabra toma la mediana de los tiempos de las pasadas que la detectaron;
+   si una pasada no la oyó, la rescatan las otras; si las pasadas discrepan mucho, queda como dudosa */
+function mergeFulls(fulls){
+  const runs=fulls.filter(Boolean);if(!runs.length)return null;
+  if(runs.length===1)return{full:runs[0],runs:1};
+  const med=a=>{const b=[...a].sort((x,y)=>x-y);return b.length%2?b[b.length>>1]:(b[b.length/2-1]+b[b.length/2])/2};
+  const n=runs[0].length,out=[];
+  for(let i=0;i<n;i++){
+    const c=runs.map(r=>r[i]),A=c.filter(x=>x.src==='asr'),N=c.filter(x=>x.src==='near'),I=c.filter(x=>x.src==='interp');
+    const pool=A.length?A:(N.length?N:I),src=A.length?'asr':(N.length?'near':'interp');
+    const starts=[...A,...N].map(x=>x.s),spread=starts.length>1?Math.max(...starts)-Math.min(...starts):0;
+    out.push({s:med(pool.map(x=>x.s)),e:med(pool.map(x=>x.e)),src,n:A.length,spread,dud:src!=='interp'&&spread>.4});
+  }
+  return{full:out,runs:runs.length};
+}
+/* Aplica el resultado a la letra (L). «chunks» es una pasada (lista de palabras) o varias (lista de listas) */
+function applyAlign(L,chunks,opt){
+  opt=opt||{};
+  const runs=(chunks.length&&Array.isArray(chunks[0]))?chunks:[chunks];
+  const refs=[];L.forEach(ln=>{if(ln.bg)return;ln.w.forEach(x=>refs.push({ln,x}))});
+  const lw=refs.map(r=>normW(r.x.t)),idx=lw.map((w,i)=>i).filter(i=>lw[i].length);
+  const mg=mergeFulls(runs.map(ch=>alignRun(lw,idx,ch)));
+  if(!mg)return null;
+  const full=mg.full,multi=mg.runs>1;
+  const est=[],near=[],dud=[],touched=[];let matched=0,kept=0,agreed=0,rescued=0;
+  const dd=[];refs.forEach((r,i)=>{const f=full[i];if(f.src==='asr'&&f.e>f.s)dd.push(f.e-f.s)});dd.sort((a,b)=>a-b);
+  const cap=Math.min(4,Math.max(2,(dd.length?dd[dd.length>>1]:.4)*8));
   refs.forEach((r,i)=>{
     if(opt.keep&&r.x.s!=null){kept++;return}
-    const f=full[i];r.x.s=r3(f.s);r.x.e=null;touched.push(r.x);
-    if(f.src==='asr')matched++;else if(f.src==='near')near.push(r.x);else est.push(r.x);
+    const f=full[i],nx=refs[i+1],nf=nx&&nx.ln===r.ln?full[i+1]:null;
+    r.x.s=r3(f.s);r.x.e=null;touched.push(r.x);
+    if(nf&&f.src!=='interp'&&f.e<nf.s-.12)r.x.e=r3(Math.max(f.e,f.s+.08));
+    if(f.src==='asr'){matched++;if(multi){if(f.n>=2)agreed++;else rescued++}}else if(f.src==='near')near.push(r.x);else est.push(r.x);
+    if(f.dud)dud.push(r.x);
   });
   const groups=[];refs.forEach((r,i)=>{const g=groups[groups.length-1];if(g&&g.ln===r.ln)g.ids.push(i);else groups.push({ln:r.ln,ids:[i]})});
   groups.forEach((g,gi)=>{
     const li=g.ids[g.ids.length-1];if(opt.keep&&!touched.includes(refs[li].x))return;
     const f=full[li],nx=groups[gi+1]&&full[groups[gi+1].ids[0]];
-    let e=Math.min(f.e,f.s+6);if(nx)e=Math.min(e,nx.s);
+    let e=Math.min(f.e,f.s+cap);if(nx)e=Math.min(e,nx.s);
     g.ln.w[g.ln.w.length-1].e=r3(Math.max(e,f.s+.12));
   });
   let bgN=0;
@@ -492,7 +525,23 @@ function applyAlign(L,chunks,opt){
     ln.w.forEach((x,k)=>{x.s=r3(ps+(pe-ps)*k/n);x.e=null;est.push(x);touched.push(x)});
     ln.w[n-1].e=r3(pe);bgN+=n;
   });
-  return{matched,near:near.length,total:refs.length,kept,est:est.length,bg:bgN,asr:aw.length,estWords:est,nearWords:near,touched};
+  return{matched,near:near.length,total:refs.length,kept,est:est.length,bg:bgN,passes:mg.runs,agreed,rescued,dud:dud.length,
+    estWords:est,nearWords:near,dudWords:dud,touched};
+}
+/* instante donde el audio se calla entre dos palabras (o null si no hay silencio claro); pk = envolvente, pps = puntos por segundo */
+function energyEnd(pk,pps,s,n){
+  if(!pk||!pk.length||n-s<.45)return null;
+  const i0=Math.max(0,Math.floor(s*pps)),i1=Math.min(pk.length-1,Math.floor(n*pps));
+  if(i1-i0<4)return null;
+  const seg=Array.from(pk.slice(i0,i1+1)).sort((a,b)=>a-b),ref=seg[Math.floor(seg.length*.9)];
+  if(ref<.03)return null;
+  const thr=Math.max(.02,ref*.18),minQ=Math.round(.2*pps),skip=Math.round(.15*pps),w=Math.max(1,Math.round(.04*pps));
+  let run=0;
+  for(let i=i0+skip;i<=i1;i++){
+    let a=0,c=0;for(let k=Math.max(i0,i-w);k<=Math.min(i1,i+w);k++){a+=pk[k];c++}
+    if(a/c<thr){run++;if(run>=minQ){const q=(i-run+1)/pps;return q-s>=.12&&n-q>=.2?q+.04:null}}else run=0;
+  }
+  return null;
 }
 /*ENDPURE*/
 
@@ -527,7 +576,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='2.7',PK='lyricsync_projects';
+const APP_VERSION='2.9',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -562,7 +611,7 @@ function render(){
     ws.appendChild(mt);
     ln.w.forEach((x,j)=>{
       const c=document.createElement('div'),nx=ln.w[j+1];
-      c.className='w'+(x.s==null?' un':'')+(x.j?' joined':'')+(aiSet.has(x)?' ai':'')+(aiSet2.has(x)?' ai2':'')+(sync&&P.l===i&&P.w===j?' cur':'')+(sync&&!noEnd()&&P.l===i&&P.w===ln.w.length&&j===ln.w.length-1?' curend':'');
+      c.className='w'+(x.s==null?' un':'')+(x.j?' joined':'')+(aiSet.has(x)?' ai':'')+(aiSet2.has(x)?' ai2':'')+(aiSet3.has(x)?' ai3':'')+(sync&&P.l===i&&P.w===j?' cur':'')+(sync&&!noEnd()&&P.l===i&&P.w===ln.w.length&&j===ln.w.length-1?' curend':'');
       c.dataset.l=i;c.dataset.w=j;
       c.innerHTML=`<input class="tx" value="${X(x.t)}" style="width:${Math.max(9,x.t.length+1)}ch" aria-label="Palabra"><input class="s" type="number" step="0.01" placeholder="inicio" value="${x.s==null?'':r3(x.s)}" aria-label="Inicio (s)"><input class="e" type="number" step="0.01" placeholder="${nx&&nx.s!=null?'auto':'fin'}" value="${x.e==null?'':r3(x.e)}" aria-label="Fin (s)"><button class="pick" data-a="pick" data-l="${i}" data-w="${j}" title="Elegir esta palabra: apretá espacio para marcarla con el tiempo actual" aria-label="Elegir esta palabra para marcarla con espacio">◎</button><button class="cut" data-a="cut" data-l="${i}" data-w="${j}" title="Partir esta palabra en dos partes, sin espacio: poné el cursor del texto entre dos letras y tocá ✂" aria-label="Partir palabra">✂</button>${j>0?`<button class="lnk" data-a="jn" data-l="${i}" data-w="${j}" title="${x.j?'Separar de la parte anterior (poner espacio)':'Pegar a la parte anterior (sin espacio)'}" aria-label="Pegar o separar de la palabra anterior">${x.j?'⌒':'·'}</button>`:''}`;
       ws.appendChild(c);chips[i][j]=c;
@@ -961,8 +1010,8 @@ const unfocusAudio=()=>setTimeout(()=>{if(!sync)return;a.blur();const ae=documen
 a.addEventListener('pointerup',unfocusAudio);a.addEventListener('focus',()=>{if(sync)a.blur()});a.addEventListener('keyup',unfocusAudio);
 
 /* ===== Sincronización automática (Whisper en el navegador) ===== */
-let audioBlob=null,auW=null,auRej=null,auBusy=false,auCancel=false,auBase='',auT0=0,auTick=0,auDl={};
-const aiSet=new WeakSet(),aiSet2=new WeakSet(),TURBO='onnx-community/whisper-large-v3-turbo_timestamped';
+let audioBlob=null,auW=null,auRej=null,auBusy=false,auCancel=false,auBase='',auPass='',auT0=0,auTick=0,auDl={};
+const aiSet=new WeakSet(),aiSet2=new WeakSet(),aiSet3=new WeakSet(),TURBO='onnx-community/whisper-large-v3-turbo_timestamped';
 const AU_WORKER=`let T=null,tr=null,key='';
 const post=x=>self.postMessage(x);
 function segToWords(segs){
@@ -990,7 +1039,7 @@ self.onmessage=async e=>{
       key=k;
     }
     post({type:'status',msg:'Escuchando la canción…'});
-    const base={chunk_length_s:m.chunk||30,stride_length_s:(m.chunk===15?3:5),task:'transcribe'};
+    const ch=m.chunk||30,base={chunk_length_s:ch,stride_length_s:Math.max(2,Math.round(ch/6)),task:'transcribe'};
     if(m.lang&&m.lang!=='auto')base.language=m.lang;
     let chunks=null;
     if(!m.seg){
@@ -1001,7 +1050,7 @@ self.onmessage=async e=>{
       const out=await tr(m.audio,Object.assign({return_timestamps:true},base));
       chunks=segToWords(out.chunks||[]);
     }
-    post({type:'done',chunks});
+    post({type:'done',id:m.id,chunks});
   }catch(err){post({type:'error',msg:String((err&&err.message)||err)})}
 };`;
 async function decode16k(blob,enh){
@@ -1018,36 +1067,43 @@ async function decode16k(blob,enh){
   src.start();
   return (await off.startRendering()).getChannelData(0).slice();
 }
+/* copia del audio con un silencio al principio: corre los límites de las ventanas para que cada pasada falle distinto */
+const padA=(a,sec)=>{const k=Math.round(sec*16000),o=new Float32Array(a.length+k);o.set(a,k);return o};
+const PASSES=[{chunk:30,enh:false,pad:0},{chunk:15,enh:false,pad:.4},{chunk:20,enh:true,pad:.9}];
 function auUI(busy,msg){
   auBusy=busy;$('aurun').disabled=busy;$('aucan').hidden=!busy;$('aubar').hidden=!busy;
   if(!busy){clearInterval(auTick);$('aubi').classList.remove('ind')}
   if(msg!=null)$('aust').textContent=msg;
 }
 function auMsg(m){
-  if(m.type==='status'){auBase=m.msg;if(/Escuchando/.test(m.msg)){$('aubi').classList.add('ind');auT0=Date.now()}}
+  const pre=auPass?auPass+' · ':'';
+  if(m.type==='status'){auBase=pre+m.msg;if(/Escuchando/.test(m.msg)){$('aubi').classList.add('ind');auT0=Date.now()}}
   else if(m.type==='dl'&&m.total){
     auDl[m.file]={l:m.loaded,t:m.total};let l=0,t=0;for(const k in auDl){l+=auDl[k].l;t+=auDl[k].t}
     const pc=t?l/t:0;$('aubi').classList.remove('ind');$('aubi').style.width=(pc*100).toFixed(1)+'%';
-    auBase='Descargando el modelo… '+Math.round(pc*100)+'% ('+(l/1048576).toFixed(0)+' de '+(t/1048576).toFixed(0)+' MB)';
+    auBase=pre+'Descargando el modelo… '+Math.round(pc*100)+'% ('+(l/1048576).toFixed(0)+' de '+(t/1048576).toFixed(0)+' MB)';
   }
   $('aust').textContent=auBase;
 }
-function runWorker(audio,cfg){
+function auOpen(){
+  try{auW=new Worker(URL.createObjectURL(new Blob([AU_WORKER],{type:'text/javascript'})))}
+  catch(e){throw new Error('Este navegador no pudo crear el proceso de fondo para el modelo.')}
+  return auW;
+}
+function auClose(){if(auW){auW.terminate();auW=null}}
+function auCall(w,msg){
   return new Promise((res,rej)=>{
-    let w;auRej=rej;
-    try{w=new Worker(URL.createObjectURL(new Blob([AU_WORKER],{type:'text/javascript'})))}
-    catch(e){return rej(new Error('Este navegador no pudo crear el proceso de fondo para el modelo.'))}
-    auW=w;
-    w.onmessage=ev=>{const m=ev.data;if(m.type==='done'){w.terminate();auW=null;res(m.chunks)}else if(m.type==='error'){w.terminate();auW=null;rej(new Error(m.net?'No se pudo descargar el modelo: revisá tu conexión a internet. ('+m.msg+')':m.msg))}else auMsg(m)};
-    w.onerror=ev=>{w.terminate();auW=null;rej(new Error('No se pudo cargar el modelo. ¿Hay conexión a internet para descargarlo?'+(ev.message?' ('+ev.message+')':'')))};
-    w.postMessage({cmd:'run',audio,model:cfg.model,device:cfg.device,lang:cfg.lang,dtype:cfg.dtype||null,chunk:cfg.chunk,seg:cfg.seg},[audio.buffer]);
+    auRej=rej;
+    w.onmessage=ev=>{const m=ev.data;if(m.type==='done')res(m.chunks);else if(m.type==='error')rej(new Error(m.net?'No se pudo descargar el modelo: revisá tu conexión a internet. ('+m.msg+')':m.msg));else auMsg(m)};
+    w.onerror=ev=>rej(new Error('No se pudo cargar el modelo. ¿Hay conexión a internet para descargarlo?'+(ev.message?' ('+ev.message+')':'')));
+    w.postMessage(msg,[msg.audio.buffer]);
   });
 }
 let gpuOK=null;
 async function hasGPU(){if(gpuOK!==null)return gpuOK;try{gpuOK=!!(navigator.gpu&&await navigator.gpu.requestAdapter())}catch(e){gpuOK=false}return gpuOK}
 $('aum').onchange=()=>{if($('aum').value===TURBO)$('aud').value='webgpu'};
 $('aucan').onclick=()=>{
-  auCancel=true;if(auW){auW.terminate();auW=null}
+  auCancel=true;auClose();
   if(auRej){auRej(new Error('cancelado'));auRej=null}
   auUI(false,'Cancelado. No se cambió nada.');
 };
@@ -1059,25 +1115,61 @@ $('aurun').onclick=async()=>{
   const cfg={model:$('aum').value,device:$('aud').value,lang:$('aul').value,chunk:$('aush').checked?15:30,seg:$('auseg').checked};
   if(cfg.model===TURBO){cfg.device='webgpu';cfg.dtype={encoder_model:'fp16',decoder_model_merged:'fp16'}}
   if(cfg.device==='webgpu'&&!(await hasGPU())){$('aust').textContent='Tu navegador no tiene WebGPU (hace falta Chrome o Edge actualizados y una placa de video compatible). Elegí el modelo Small con el motor «Compatible».';return}
-  auCancel=false;auDl={};auBase='Preparando el audio…';auT0=Date.now();
+  const precise=$('aupr').checked,passes=precise?PASSES:[{chunk:cfg.chunk,enh:$('aufx').checked,pad:0}];
+  auCancel=false;auDl={};auPass='';auBase='Preparando el audio…';auT0=Date.now();
   auUI(true,auBase);$('aubi').style.width='0';
   clearInterval(auTick);auTick=setInterval(()=>{if($('aubi').classList.contains('ind'))$('aust').textContent=auBase+' ('+Math.round((Date.now()-auT0)/1000)+' s, puede tardar varios minutos)'},1000);
   try{
-    const audio=await decode16k(audioBlob,$('aufx').checked);if(auCancel)return;
-    auBase='Cargando el modelo…';$('aust').textContent=auBase;
-    const chunks=await (typeof window.__asrMock==='function'?window.__asrMock(audio,cfg,auMsg):runWorker(audio,cfg));
+    const dec={},runs=[],mock=typeof window.__asrMock==='function';let failed=0,w=null;
+    if(!mock)w=auOpen();
+    try{
+      for(let k=0;k<passes.length;k++){
+        if(auCancel)return;
+        const P=passes[k];auPass=passes.length>1?'Pasada '+(k+1)+' de '+passes.length:'';
+        const pre=auPass?auPass+' · ':'';
+        auBase=pre+'Preparando el audio…';$('aust').textContent=auBase;$('aubi').classList.remove('ind');
+        if(!dec[P.enh])dec[P.enh]=await decode16k(audioBlob,P.enh);
+        if(auCancel)return;
+        const audio=padA(dec[P.enh],P.pad),pc=Object.assign({},cfg,{chunk:P.chunk});
+        auBase=pre+'Cargando el modelo…';$('aust').textContent=auBase;
+        try{
+          const chunks=await (mock?window.__asrMock(audio,pc,auMsg):auCall(w,{cmd:'run',id:k,audio,model:cfg.model,device:cfg.device,lang:cfg.lang,dtype:cfg.dtype||null,chunk:P.chunk,seg:cfg.seg}));
+          if(auCancel)return;
+          runs.push(chunks.map(c=>({t:c.t,s:Math.max(0,c.s-P.pad),e:c.e==null?null:c.e-P.pad})).filter(c=>c.s>=0&&(c.e==null||c.e>0)));
+        }catch(e){
+          if(auCancel||e.message==='cancelado')return;
+          if(k===0)throw e;
+          failed++;
+        }
+      }
+    }finally{auClose()}
     if(auCancel)return;
-    const before=snapS(),r=applyAlign(L,chunks,{keep:$('auk').checked});
+    const before=snapS(),r=applyAlign(L,runs.length>1?runs:runs[0],{keep:$('auk').checked});
     if(!r){auUI(false,'El modelo no reconoció nada que coincida con tu letra. Probá con el modelo Turbo (si tu navegador tiene WebGPU), revisá el idioma o usá las opciones avanzadas.');return}
     H.push(before);if(H.length>150)H.shift();R.length=0;updH();
     if($('aus2').checked&&onsets.length){
       r.touched.forEach(x=>{x.s=snapT(x.s,.08)});
       L.forEach(ln=>{let pv=-1;ln.w.forEach(x=>{if(x.s!=null){if(x.s<pv)x.s=r3(pv+.01);pv=x.s}})});
     }
-    r.estWords.forEach(x=>aiSet.add(x));r.nearWords.forEach(x=>aiSet2.add(x));
+    let paus=0;
+    if($('aus3').checked&&peaks){
+      const flat=[];L.forEach(ln=>{if(!ln.bg)ln.w.forEach(x=>flat.push(x))});const tset=new Set(r.touched);
+      flat.forEach((x,k)=>{
+        if(!tset.has(x)||x.s==null)return;
+        const nx=flat[k+1],n=nx&&nx.s!=null?nx.s:(x.e!=null?x.e:x.s+.6),q=energyEnd(peaks,PPS,x.s,n);
+        if(q!=null&&n-q>=.2&&(x.e==null||q<x.e-.05)){x.e=r3(q);paus++}
+      });
+    }
+    r.estWords.forEach(x=>aiSet.add(x));r.nearWords.forEach(x=>aiSet2.add(x));r.dudWords.forEach(x=>aiSet3.add(x));
     P=firstOpen();render();save();
-    let msg='Listo: '+r.matched+' de '+r.total+' palabras reconocidas exactas · '+r.near+' ubicadas por posición (borde punteado) · '+r.est+' estimadas (borde amarillo discontinuo)'+(r.kept?' · '+r.kept+' ya marcadas se respetaron':'')+'. Revisá en la onda; Ctrl+Z lo deshace todo.';
-    if(r.total&&r.matched/r.total<.5)msg+=' El reconocimiento fue flojo: probá el modelo Turbo (con WebGPU) o las opciones avanzadas.';
+    let msg;
+    if(r.passes>1){
+      msg='Listo (modo preciso, '+r.passes+' pasadas'+(failed?'; '+failed+' falló y no se usó':'')+'): '+r.agreed+' de '+r.total+' palabras coinciden en 2 o más pasadas · '+r.rescued+' las oyó una sola pasada · '+r.near+' ubicadas por posición · '+r.est+' estimadas'+(r.dud?' · '+r.dud+' dudosas (borde rojo discontinuo, revisalas primero)':'');
+    }else{
+      msg='Listo: '+r.matched+' de '+r.total+' palabras reconocidas exactas · '+r.near+' ubicadas por posición (borde punteado) · '+r.est+' estimadas (borde amarillo discontinuo)';
+    }
+    msg+=(r.kept?' · '+r.kept+' ya marcadas se respetaron':'')+(paus?' · '+paus+' pausas dejadas donde el audio se calla':'')+'. Revisá en la onda; Ctrl+Z lo deshace todo.';
+    if(r.total&&r.matched/r.total<.5)msg+=' El reconocimiento fue flojo: probá el modelo Turbo (con WebGPU) o el modo preciso.';
     auUI(false,msg);
   }catch(e){
     if(auCancel||e.message==='cancelado')return;
