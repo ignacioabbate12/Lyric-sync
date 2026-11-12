@@ -720,7 +720,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.0',PK='lyricsync_projects';
+const APP_VERSION='3.1',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -965,7 +965,7 @@ function pjUI(){
   $('pjs').innerHTML=ids.map(id=>'<option value="'+id+'"'+(id===PR.cur?' selected':'')+'>'+X(PR.list[id].name)+'</option>').join('');
   const p=PR.list[PR.cur];
   $('cn').textContent=p?p.name:'Elegir proyecto';
-  if($('ausl'))$('ausl').hidden=!(p&&p.vsv);
+  if($('ausl'))$('ausl').hidden=!((p&&p.vsv)||$('ausep').checked);
   $('pjinfo').textContent=(p&&p.audio?(p.asv?'Audio guardado con este proyecto: '+p.audio+(p.asz?' ('+(p.asz/1048576).toFixed(1)+' MB)':'')+'. Se carga solo al abrirlo.':'Este proyecto usaba «'+p.audio+'», pero no quedó guardado: volvé a cargarlo con «Cargar audio».'):'Este proyecto todavía no tiene audio: cargalo con «Cargar audio» y queda guardado con el proyecto.')+' Último respaldo: '+(getMeta().last?new Date(getMeta().last).toLocaleDateString('es'):'nunca')+'.';
 }
 function openProj(id,noSave){
@@ -1451,6 +1451,7 @@ function wav16(a,sr){
   for(let i=0;i<n;i++)v.setInt16(44+i*2,Math.round(Math.max(-1,Math.min(1,a[i]*g))*32767),true);
   return new Blob([b],{type:'audio/wav'});
 }
+$('ausep').addEventListener('change',()=>{const p=PR.list[PR.cur];$('ausl').hidden=!((p&&p.vsv)||$('ausep').checked)});
 $('ausl').onclick=async()=>{
   const id=PR.cur;if(!id)return;let d=vocalsMem&&vocalsMem.id===id?vocalsMem.data:null;
   if(!d){try{const c=await adbGet('vocals:'+id);d=c&&c.data}catch(e){}}
