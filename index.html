@@ -252,6 +252,7 @@ dialog p{margin:6px 0;color:var(--mu)}
     <label class="mu"><input id="auk" type="checkbox" checked> No tocar las palabras que ya tienen tiempo</label>
     <label class="mu"><input id="aus2" type="checkbox" checked> Ajustar a golpes de voz</label>
     <label class="mu"><input id="aus3" type="checkbox" checked> Dejar pausas donde el audio se calla</label>
+    <label class="mu" title="Aísla la voz con un modelo de separación (MDX-Net Kim Vocal 2) y analiza solo la voz, sin batería ni guitarras. Descarga unos 33 MB la primera vez."><input id="ausep" type="checkbox"> <b>Separar la voz de los instrumentos</b> antes de analizar (con placa de video tarda poco; sin ella puede tardar muchos minutos)</label>
     <label class="mu" title="Escucha la canción 3 veces con ajustes distintos y combina los resultados: rescata palabras que una pasada no oyó y marca las dudosas"><input id="aupr" type="checkbox"> <b>Modo preciso</b> (3 pasadas combinadas, tarda unas 3 veces más)</label>
   </div>
   <details><summary class="mu">Opciones avanzadas (con el modo preciso no se usan: cada pasada trae las suyas)</summary>
@@ -261,8 +262,9 @@ dialog p{margin:6px 0;color:var(--mu)}
       <label class="mu"><input id="auseg" type="checkbox"> Usar tiempos por frase (más estables que por palabra)</label>
     </div>
   </details>
-  <div class="row"><button id="aurun" class="pri">Sincronizar automáticamente</button><button id="aucan" hidden>Cancelar</button><span id="aust" class="mu"></span></div>
+  <div class="row"><button id="aurun" class="pri">Sincronizar automáticamente</button><button id="aucan" hidden>Cancelar</button><button id="ausl" hidden title="Reproduce la voz aislada para comprobar qué tan bien quedó">Oír la voz separada</button><span id="aust" class="mu"></span></div>
   <div id="aubar" hidden><i id="aubi"></i></div>
+  <audio id="ausa" controls hidden style="width:100%;margin-top:10px"></audio>
 </details>
 <details><summary>Cómo se usa</summary><ol>
   <li>Cargá el audio y pegá la letra (o importá un .lrc / .ttml), y tocá <b>Aplicar texto</b>.</li>
@@ -285,6 +287,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <li><b>Partes de una palabra:</b> para que una parte dure más sin dejar un espacio, poné el cursor dentro de la palabra y tocá ✂ (o escribí <kbd>can|ción</kbd>). Cada parte tiene su propio tiempo. El botón ⌒ pega o separa una parte de la anterior.</li>
   <li><b>Sincronización automática:</b> con la letra pegada y el audio cargado, tocá «Sincronizar automáticamente». Las palabras que el modelo no reconoció quedan con borde amarillo discontinuo (estimadas) o punteado (ubicadas por posición) para que las revises. El modelo Turbo es el que mejor reconoce el canto.</li>
   <li><b>Modo preciso:</b> escucha la canción tres veces con ajustes distintos y combina las pasadas (mediana por palabra). Rescata palabras que una pasada no oyó y marca con borde rojo discontinuo las dudosas, donde las pasadas no coinciden: son las que conviene revisar primero.</li>
+  <li><b>Separar la voz:</b> aísla la voz de los instrumentos antes de analizar. Se guarda con el proyecto (la segunda vez no hay que repetirla) y con «Oír la voz separada» puedes comprobar cómo quedó. Con la voz aislada, las pausas entre palabras también se detectan mejor.</li>
   <li>Clic en el borde de una palabra la reproduce. <kbd>Shift</kbd> + clic mueve el cursor de sincronización ahí.</li>
 </ol></details>
 <details id="avd"><summary id="avs">Avisos</summary><div id="av"></div></details>
@@ -543,6 +546,147 @@ function energyEnd(pk,pps,s,n){
   }
   return null;
 }
+
+/* ===== Separación de voz (MDX-Net «Kim Vocal 2»): matemática ===== */
+/* Estas funciones se copian tal cual dentro del proceso de fondo (toString), así que no deben usar nada de afuera. */
+function mdxPlan(n){
+  const f=[];let r=n;while(r%4===0){f.push(4);r/=4}
+  if(r%2===0){f.push(2);r/=2}
+  for(let p=3;r>1;p+=2){while(r%p===0){f.push(p);r/=p}}
+  const st=[];let nn=n,s=1;
+  for(const rr of f){
+    const m=nn/rr,tw=new Float64Array(2*(rr-1)*m),ct=new Float64Array(rr),sn=new Float64Array(rr);
+    for(let u=1;u<rr;u++)for(let p=0;p<m;p++){const a=-2*Math.PI*u*p/nn,k=2*((u-1)*m+p);tw[k]=Math.cos(a);tw[k+1]=Math.sin(a)}
+    for(let k=0;k<rr;k++){ct[k]=Math.cos(2*Math.PI*k/rr);sn[k]=Math.sin(2*Math.PI*k/rr)}
+    st.push({r:rr,m,s,tw,ct,sn});nn=m;s*=rr;
+  }
+  return{n,st,br:new Float64Array(n),bi:new Float64Array(n),ta:new Float64Array(128),tb:new Float64Array(128),ws:{}};
+}
+/* FFT de radices mixtos (Stockham). sg=-1 directa, +1 inversa sin escalar. Trabaja en el lugar sobre re/im (Float64Array de largo n). */
+function mdxFFT(P,re,im,sg){
+  let xr=re,xi=im,yr=P.br,yi=P.bi;
+  const ta=P.ta,tb=P.tb;
+  for(let si=0;si<P.st.length;si++){
+    const S=P.st[si],r=S.r,m=S.m,s=S.s,tw=S.tw,ct=S.ct,sn=S.sn,sm=s*m;
+    for(let p=0;p<m;p++){
+      for(let q=0;q<s;q++){
+        const i0=q+s*p,o=q+s*(r*p);
+        if(r===2){
+          const i1=i0+sm,ar=xr[i0],ai=xi[i0],br=xr[i1],bi=xi[i1];
+          yr[o]=ar+br;yi[o]=ai+bi;
+          const dr=ar-br,di=ai-bi,wr=tw[2*p],wi=sg<0?tw[2*p+1]:-tw[2*p+1];
+          yr[o+s]=dr*wr-di*wi;yi[o+s]=dr*wi+di*wr;
+        }else if(r===4){
+          const i1=i0+sm,i2=i1+sm,i3=i2+sm;
+          const a0r=xr[i0],a0i=xi[i0],a1r=xr[i1],a1i=xi[i1],a2r=xr[i2],a2i=xi[i2],a3r=xr[i3],a3i=xi[i3];
+          const t0r=a0r+a2r,t0i=a0i+a2i,t1r=a0r-a2r,t1i=a0i-a2i,t2r=a1r+a3r,t2i=a1i+a3i,t3r=a1r-a3r,t3i=a1i-a3i;
+          const jr=-sg*t3i,ji=sg*t3r;
+          yr[o]=t0r+t2r;yi[o]=t0i+t2i;
+          const b1r=t1r+jr,b1i=t1i+ji,b2r=t0r-t2r,b2i=t0i-t2i,b3r=t1r-jr,b3i=t1i-ji;
+          const w1r=tw[2*p],w1i=sg<0?tw[2*p+1]:-tw[2*p+1],k2=2*(m+p),w2r=tw[k2],w2i=sg<0?tw[k2+1]:-tw[k2+1],k3=2*(2*m+p),w3r=tw[k3],w3i=sg<0?tw[k3+1]:-tw[k3+1];
+          yr[o+s]=b1r*w1r-b1i*w1i;yi[o+s]=b1r*w1i+b1i*w1r;
+          yr[o+2*s]=b2r*w2r-b2i*w2i;yi[o+2*s]=b2r*w2i+b2i*w2r;
+          yr[o+3*s]=b3r*w3r-b3i*w3i;yi[o+3*s]=b3r*w3i+b3i*w3r;
+        }else{
+          for(let t=0;t<r;t++){ta[t]=xr[i0+sm*t];tb[t]=xi[i0+sm*t]}
+          for(let u=0;u<r;u++){
+            let sr=0,sI=0;
+            for(let t=0;t<r;t++){const k=(t*u)%r,c=ct[k],d=sg*sn[k];sr+=ta[t]*c-tb[t]*d;sI+=ta[t]*d+tb[t]*c}
+            if(u>0){const kk=2*((u-1)*m+p),wr=tw[kk],wi=sg<0?tw[kk+1]:-tw[kk+1],nr=sr*wr-sI*wi;sI=sr*wi+sI*wr;sr=nr}
+            yr[o+u*s]=sr;yi[o+u*s]=sI;
+          }
+        }
+      }
+    }
+    const tr=xr,ti=xi;xr=yr;xi=yi;yr=tr;yi=ti;
+  }
+  if(xr!==re){re.set(xr);im.set(xi)}
+}
+/* STFT al estilo torch (center=True, reflejo en los bordes, ventana Hann periódica). Escribe en dst [4,dimF,frames] el canal ch (0=izq, 1=der); de a dos cuadros por FFT. */
+function mdxSTFT(x,P,nfft,hop,win,frames,dimF,dst,ch){
+  const L=x.length,pad=nfft>>1,re=new Float64Array(nfft),im=new Float64Array(nfft);
+  const refl=i=>{if(i<0)i=-i;if(i>=L)i=2*(L-1)-i;return i<0?0:i};
+  for(let t=0;t<frames;t+=2){
+    const t2=t+1<frames?t+1:-1;
+    for(let k=0;k<nfft;k++){re[k]=x[refl(t*hop-pad+k)]*win[k];im[k]=t2>=0?x[refl(t2*hop-pad+k)]*win[k]:0}
+    mdxFFT(P,re,im,-1);
+    const rb=(2*ch)*dimF*frames,ib=(2*ch+1)*dimF*frames;
+    for(let f=0;f<dimF;f++){
+      const nk=(nfft-f)%nfft,zr=re[f],zi=im[f],wr=re[nk],wi=im[nk],o=f*frames;
+      dst[rb+o+t]=(zr+wr)/2;dst[ib+o+t]=(zi-wi)/2;
+      if(t2>=0){dst[rb+o+t2]=(zi+wi)/2;dst[ib+o+t2]=-(zr-wr)/2}
+    }
+  }
+}
+/* suma de ventana² para normalizar la inversa (depende solo del largo) */
+function mdxWsum(P,L,nfft,hop,win,frames){
+  if(P.ws[L])return P.ws[L];
+  const w=new Float64Array(L),pad=nfft>>1;
+  for(let t=0;t<frames;t++)for(let k=0;k<nfft;k++){const q=t*hop-pad+k;if(q>=0&&q<L)w[q]+=win[k]*win[k]}
+  return P.ws[L]=w;
+}
+/* iSTFT al estilo torch desde el espectro [4,dimF,frames] del canal ch; escribe L muestras en out (multiplicadas por gain) */
+function mdxISTFT(spec,ch,P,nfft,hop,win,frames,dimF,out,gain){
+  const L=out.length,pad=nfft>>1,half=nfft>>1,re=new Float64Array(nfft),im=new Float64Array(nfft),acc=new Float64Array(L),ws=mdxWsum(P,L,nfft,hop,win,frames);
+  const rb=(2*ch)*dimF*frames,ib=(2*ch+1)*dimF*frames;
+  for(let t=0;t<frames;t+=2){
+    const t2=t+1<frames?t+1:-1;
+    for(let k=0;k<=half;k++){
+      let ar=0,ai=0,br=0,bi=0;
+      if(k<dimF){const o=k*frames;ar=spec[rb+o+t];ai=spec[ib+o+t];if(t2>=0){br=spec[rb+o+t2];bi=spec[ib+o+t2]}}
+      if(k===0||k===half){ai=0;bi=0}
+      re[k]=ar-bi;im[k]=ai+br;
+      if(k>0&&k<half){const nk=nfft-k;re[nk]=ar+bi;im[nk]=-ai+br}
+    }
+    mdxFFT(P,re,im,1);
+    for(let k=0;k<nfft;k++){
+      const q=t*hop-pad+k;
+      if(q>=0&&q<L)acc[q]+=re[k]/nfft*win[k];
+      if(t2>=0){const q2=t2*hop-pad+k;if(q2>=0&&q2<L)acc[q2]+=im[k]/nfft*win[k]}
+    }
+  }
+  for(let i=0;i<L;i++)out[i]=ws[i]>1e-11?acc[i]/ws[i]*gain:0;
+}
+/* Separa la voz: ch=[izq,der] a 44,1 kHz, run(Float32Array de [1,4,dimF,frames]) → Float32Array del mismo tamaño. Devuelve [izq,der] de la voz. */
+async function mdxDemix(ch,run,opt,onProg){
+  opt=opt||{};
+  const nfft=opt.nfft||7680,hop=opt.hop||1024,dimF=opt.dimF||3072,dimT=opt.dimT||256,gain=opt.comp==null?1.009:opt.comp,ovr=opt.overlap==null?.25:opt.overlap;
+  const frames=dimT,chunk=hop*(dimT-1),len=ch[0].length,ov=Math.round(chunk*ovr),step=chunk-ov;
+  const P=mdxPlan(nfft),win=new Float64Array(nfft);
+  for(let k=0;k<nfft;k++)win[k]=.5-.5*Math.cos(2*Math.PI*k/nfft);
+  const starts=[];for(let s0=0;;s0+=step){starts.push(s0);if(s0+chunk>=len)break}
+  const outL=new Float32Array(len),outR=new Float32Array(len),wt=new Float32Array(len);
+  const x=[new Float32Array(chunk),new Float32Array(chunk)],y=[new Float32Array(chunk),new Float32Array(chunk)];
+  for(let ci=0;ci<starts.length;ci++){
+    if(opt.cancel&&opt.cancel())throw new Error('cancelado');
+    const s0=starts[ci],last=ci===starts.length-1,inp=new Float32Array(4*dimF*frames);
+    for(let c=0;c<2;c++){
+      x[c].fill(0);const n=Math.max(0,Math.min(chunk,len-s0));
+      if(n>0)x[c].set(ch[c].subarray(s0,s0+n));
+      mdxSTFT(x[c],P,nfft,hop,win,frames,dimF,inp,c);
+    }
+    for(let c=0;c<4;c++)for(let f=0;f<3;f++)inp.fill(0,(c*dimF+f)*frames,(c*dimF+f+1)*frames);
+    const out=await run(inp);
+    for(let c=0;c<2;c++)mdxISTFT(out,c,P,nfft,hop,win,frames,dimF,y[c],gain);
+    for(let i=0;i<chunk;i++){
+      const g=s0+i;if(g>=len)break;
+      let w=1;
+      if(ci>0&&i<ov)w=(i+.5)/ov;
+      if(!last&&i>=chunk-ov)w=Math.min(w,(chunk-i-.5)/ov);
+      outL[g]+=y[0][i]*w;outR[g]+=y[1][i]*w;wt[g]+=w;
+    }
+    if(onProg)onProg(ci+1,starts.length);
+  }
+  for(let i=0;i<len;i++){if(wt[i]>1e-6){outL[i]/=wt[i];outR[i]/=wt[i]}}
+  return[outL,outR];
+}
+/* envolvente (máximo por 4 ms, normalizada) de una señal de 16 kHz, en el mismo formato que la onda */
+function envFrom(a,sr,pps){
+  const k=Math.max(1,Math.round(sr/pps)),n=Math.ceil(a.length/k),pk=new Float32Array(n);let mx=0;
+  for(let i=0;i<n;i++){let m=0;const e=Math.min(a.length,(i+1)*k);for(let j=i*k;j<e;j++){const v=Math.abs(a[j]);if(v>m)m=v}pk[i]=m;if(m>mx)mx=m}
+  if(mx>0)for(let i=0;i<n;i++)pk[i]/=mx;
+  return pk;
+}
 /*ENDPURE*/
 
 function parseTTML(x){const d=new DOMParser().parseFromString(x,'application/xml');
@@ -576,7 +720,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='2.9',PK='lyricsync_projects';
+const APP_VERSION='3.0',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -675,6 +819,7 @@ $('sp').onchange=()=>{a.playbackRate=+$('sp').value;$('sp').blur()};
 a.onloadedmetadata=()=>{a.playbackRate=+$('sp').value};
 $('af').onchange=e=>{
   const f=e.target.files[0];if(!f)return;e.target.value='';const id=PR.cur;
+  if(id){adbDel('vocals:'+id).catch(()=>{});vocalsMem=null;if(PR.list[id])PR.list[id].vsv=false;$('ausl').hidden=true}
   setAudio(f,f.name);
   if(id&&PR.list[id]){PR.list[id].audio=f.name;PR.list[id].asv=false;savePR();storeAudio(id,f)}
   pjUI();
@@ -820,6 +965,7 @@ function pjUI(){
   $('pjs').innerHTML=ids.map(id=>'<option value="'+id+'"'+(id===PR.cur?' selected':'')+'>'+X(PR.list[id].name)+'</option>').join('');
   const p=PR.list[PR.cur];
   $('cn').textContent=p?p.name:'Elegir proyecto';
+  if($('ausl'))$('ausl').hidden=!(p&&p.vsv);
   $('pjinfo').textContent=(p&&p.audio?(p.asv?'Audio guardado con este proyecto: '+p.audio+(p.asz?' ('+(p.asz/1048576).toFixed(1)+' MB)':'')+'. Se carga solo al abrirlo.':'Este proyecto usaba «'+p.audio+'», pero no quedó guardado: volvé a cargarlo con «Cargar audio».'):'Este proyecto todavía no tiene audio: cargalo con «Cargar audio» y queda guardado con el proyecto.')+' Último respaldo: '+(getMeta().last?new Date(getMeta().last).toLocaleDateString('es'):'nunca')+'.';
 }
 function openProj(id,noSave){
@@ -839,7 +985,7 @@ $('pjdup').onclick=async()=>{
 $('pjren').onclick=()=>{const p=PR.list[PR.cur],n=prompt('Nuevo nombre',p.name);if(n&&n.trim()){p.name=n.trim();savePR();pjUI()}};
 $('pjdel').onclick=()=>{
   const p=PR.list[PR.cur];if(!confirm('¿Borrar el proyecto «'+p.name+'»? No se puede deshacer.'))return;
-  adbDel(PR.cur).catch(()=>{});delete PR.list[PR.cur];PR.cur=null;const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
+  adbDel(PR.cur).catch(()=>{});adbDel('vocals:'+PR.cur).catch(()=>{});delete PR.list[PR.cur];PR.cur=null;const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
   openProj(ids.length?ids[0]:newProj('Proyecto 1'),true);
 };
 
@@ -875,11 +1021,12 @@ function findOnsets(pk){
   }
   return on;
 }
-function snapT(t,tol){
-  let lo=0,hi=onsets.length;while(lo<hi){const m=(lo+hi)>>1;if(onsets[m]<t)lo=m+1;else hi=m}
-  let best=null,bd=tol;for(const k of [lo-1,lo]){if(k>=0&&k<onsets.length){const d=Math.abs(onsets[k]-t);if(d<=bd){bd=d;best=onsets[k]}}}
+function snapIn(arr,t,tol){
+  let lo=0,hi=arr.length;while(lo<hi){const m=(lo+hi)>>1;if(arr[m]<t)lo=m+1;else hi=m}
+  let best=null,bd=tol;for(const k of [lo-1,lo]){if(k>=0&&k<arr.length){const d=Math.abs(arr[k]-t);if(d<=bd){bd=d;best=arr[k]}}}
   return best==null?t:r3(best);
 }
+function snapT(t,tol){return snapIn(onsets,t,tol)}
 function snapSel(k){
   const wd=selWord();if(!wd||!onsets.length)return;const q=wv.sel,t0=k==='s'?wd.s:effE(L[q.l],q.w),t1=snapT(t0,.3);
   if(t1===t0)return;hist();if(k==='s')wd.s=t1;else wd.e=t1;render();save();
@@ -1053,10 +1200,7 @@ self.onmessage=async e=>{
     post({type:'done',id:m.id,chunks});
   }catch(err){post({type:'error',msg:String((err&&err.message)||err)})}
 };`;
-async function decode16k(blob,enh){
-  const ctx=new (window.AudioContext||window.webkitAudioContext)(),buf=await ctx.decodeAudioData(await blob.arrayBuffer());ctx.close();
-  const off=new OfflineAudioContext(1,Math.max(1,Math.ceil(buf.duration*16000)),16000),src=off.createBufferSource();
-  src.buffer=buf;
+function chain16k(off,src,enh){
   if(enh){
     const hp=off.createBiquadFilter(),pk=off.createBiquadFilter(),lp=off.createBiquadFilter();
     hp.type='highpass';hp.frequency.value=140;hp.Q.value=.7;
@@ -1064,7 +1208,17 @@ async function decode16k(blob,enh){
     lp.type='lowpass';lp.frequency.value=6000;lp.Q.value=.7;
     src.connect(hp);hp.connect(pk);pk.connect(lp);lp.connect(off.destination);
   }else src.connect(off.destination);
-  src.start();
+}
+async function decode16k(blob,enh){
+  const ctx=new (window.AudioContext||window.webkitAudioContext)(),buf=await ctx.decodeAudioData(await blob.arrayBuffer());ctx.close();
+  const off=new OfflineAudioContext(1,Math.max(1,Math.ceil(buf.duration*16000)),16000),src=off.createBufferSource();
+  src.buffer=buf;chain16k(off,src,enh);src.start();
+  return (await off.startRendering()).getChannelData(0).slice();
+}
+async function filter16k(a){
+  const buf=new AudioBuffer({length:a.length,sampleRate:16000,numberOfChannels:1});buf.copyToChannel(a,0);
+  const off=new OfflineAudioContext(1,Math.max(1,a.length),16000),src=off.createBufferSource();
+  src.buffer=buf;chain16k(off,src,true);src.start();
   return (await off.startRendering()).getChannelData(0).slice();
 }
 /* copia del audio con un silencio al principio: corre los límites de las ventanas para que cada pasada falle distinto */
@@ -1103,7 +1257,7 @@ let gpuOK=null;
 async function hasGPU(){if(gpuOK!==null)return gpuOK;try{gpuOK=!!(navigator.gpu&&await navigator.gpu.requestAdapter())}catch(e){gpuOK=false}return gpuOK}
 $('aum').onchange=()=>{if($('aum').value===TURBO)$('aud').value='webgpu'};
 $('aucan').onclick=()=>{
-  auCancel=true;auClose();
+  auCancel=true;auClose();if(auSep){auSep.terminate();auSep=null}
   if(auRej){auRej(new Error('cancelado'));auRej=null}
   auUI(false,'Cancelado. No se cambió nada.');
 };
@@ -1120,6 +1274,20 @@ $('aurun').onclick=async()=>{
   auUI(true,auBase);$('aubi').style.width='0';
   clearInterval(auTick);auTick=setInterval(()=>{if($('aubi').classList.contains('ind'))$('aust').textContent=auBase+' ('+Math.round((Date.now()-auT0)/1000)+' s, puede tardar varios minutos)'},1000);
   try{
+    let vocals=null,sepNote='',pkV=null,onsV=null;
+    if($('ausep').checked){
+      auPass='';auBase='Separando la voz…';$('aust').textContent=auBase;
+      try{
+        const v=await getVocals();vocals=v.data;
+        sepNote=v.cached?' · voz separada tomada de la copia guardada':' · voz separada de los instrumentos';
+        if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR();$('ausl').hidden=false}
+        pkV=envFrom(vocals,16000,PPS);onsV=findOnsets(pkV);
+      }catch(e){
+        if(auCancel||e.message==='cancelado')return;
+        sepNote=' · no se pudo separar la voz ('+e.message+'): se usó el audio original';
+      }
+      if(auCancel)return;
+    }
     const dec={},runs=[],mock=typeof window.__asrMock==='function';let failed=0,w=null;
     if(!mock)w=auOpen();
     try{
@@ -1128,7 +1296,7 @@ $('aurun').onclick=async()=>{
         const P=passes[k];auPass=passes.length>1?'Pasada '+(k+1)+' de '+passes.length:'';
         const pre=auPass?auPass+' · ':'';
         auBase=pre+'Preparando el audio…';$('aust').textContent=auBase;$('aubi').classList.remove('ind');
-        if(!dec[P.enh])dec[P.enh]=await decode16k(audioBlob,P.enh);
+        if(!dec[P.enh])dec[P.enh]=vocals?(P.enh?await filter16k(vocals):vocals.slice()):await decode16k(audioBlob,P.enh);
         if(auCancel)return;
         const audio=padA(dec[P.enh],P.pad),pc=Object.assign({},cfg,{chunk:P.chunk});
         auBase=pre+'Cargando el modelo…';$('aust').textContent=auBase;
@@ -1147,16 +1315,18 @@ $('aurun').onclick=async()=>{
     const before=snapS(),r=applyAlign(L,runs.length>1?runs:runs[0],{keep:$('auk').checked});
     if(!r){auUI(false,'El modelo no reconoció nada que coincida con tu letra. Probá con el modelo Turbo (si tu navegador tiene WebGPU), revisá el idioma o usá las opciones avanzadas.');return}
     H.push(before);if(H.length>150)H.shift();R.length=0;updH();
-    if($('aus2').checked&&onsets.length){
-      r.touched.forEach(x=>{x.s=snapT(x.s,.08)});
+    const onA=onsV||onsets;
+    if($('aus2').checked&&onA.length){
+      r.touched.forEach(x=>{x.s=snapIn(onA,x.s,.08)});
       L.forEach(ln=>{let pv=-1;ln.w.forEach(x=>{if(x.s!=null){if(x.s<pv)x.s=r3(pv+.01);pv=x.s}})});
     }
     let paus=0;
-    if($('aus3').checked&&peaks){
+    const pkE=pkV||peaks;
+    if($('aus3').checked&&pkE){
       const flat=[];L.forEach(ln=>{if(!ln.bg)ln.w.forEach(x=>flat.push(x))});const tset=new Set(r.touched);
       flat.forEach((x,k)=>{
         if(!tset.has(x)||x.s==null)return;
-        const nx=flat[k+1],n=nx&&nx.s!=null?nx.s:(x.e!=null?x.e:x.s+.6),q=energyEnd(peaks,PPS,x.s,n);
+        const nx=flat[k+1],n=nx&&nx.s!=null?nx.s:(x.e!=null?x.e:x.s+.6),q=energyEnd(pkE,PPS,x.s,n);
         if(q!=null&&n-q>=.2&&(x.e==null||q<x.e-.05)){x.e=r3(q);paus++}
       });
     }
@@ -1168,7 +1338,7 @@ $('aurun').onclick=async()=>{
     }else{
       msg='Listo: '+r.matched+' de '+r.total+' palabras reconocidas exactas · '+r.near+' ubicadas por posición (borde punteado) · '+r.est+' estimadas (borde amarillo discontinuo)';
     }
-    msg+=(r.kept?' · '+r.kept+' ya marcadas se respetaron':'')+(paus?' · '+paus+' pausas dejadas donde el audio se calla':'')+'. Revisá en la onda; Ctrl+Z lo deshace todo.';
+    msg+=sepNote+(r.kept?' · '+r.kept+' ya marcadas se respetaron':'')+(paus?' · '+paus+' pausas dejadas donde el audio se calla':'')+'. Revisá en la onda; Ctrl+Z lo deshace todo.';
     if(r.total&&r.matched/r.total<.5)msg+=' El reconocimiento fue flojo: probá el modelo Turbo (con WebGPU) o el modo preciso.';
     auUI(false,msg);
   }catch(e){
@@ -1177,6 +1347,116 @@ $('aurun').onclick=async()=>{
   }
 };
 hasGPU().then(g=>{if(g){$('aum').value=TURBO;$('aud').value='webgpu'}else{$('aum').value='onnx-community/whisper-small_timestamped';$('aud').value='wasm'}});
+
+/* ===== Separación de voz (MDX-Net Kim Vocal 2, en el navegador) ===== */
+const SEP_URL={webgpu:'https://huggingface.co/uddompang/kamvox-voice-separator/resolve/main/kim-vocal-2.fp16.onnx',wasm:'https://huggingface.co/uddompang/kamvox-voice-separator/resolve/main/kim-vocal-2.onnx'};
+const ORT_BASE='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/';
+let auSep=null,vocalsMem=null,auT0b=0;
+const SEP_WORKER=[mdxPlan,mdxFFT,mdxSTFT,mdxWsum,mdxISTFT,mdxDemix].map(f=>f.toString()).join('\n')+`
+let ort=null;
+const post=x=>self.postMessage(x);
+self.onmessage=async e=>{
+  const m=e.data;if(!m||m.cmd!=='sep')return;
+  try{
+    if(!ort){
+      try{importScripts(m.ortUrl)}catch(err){post({type:'error',net:true,msg:String((err&&err.message)||err)});return}
+      ort=self.ort;ort.env.wasm.wasmPaths=m.ortBase;ort.env.wasm.numThreads=1;
+    }
+    post({type:'status',msg:'Preparando el modelo de separación…'});
+    const sess=await ort.InferenceSession.create(new Uint8Array(m.model),{executionProviders:m.device==='webgpu'?['webgpu','wasm']:['wasm']});
+    const inName=sess.inputNames[0],outName=sess.outputNames[0];
+    const run=async inp=>{const r=await sess.run({[inName]:new ort.Tensor('float32',inp,[1,4,3072,256])});const o=r[outName];return o.data instanceof Float32Array?o.data:await o.getData()};
+    const lr=await mdxDemix([m.l,m.r],run,{},(d,t)=>post({type:'prog',done:d,total:t}));
+    const mono=new Float32Array(lr[0].length);for(let i=0;i<mono.length;i++)mono[i]=(lr[0][i]+lr[1][i])*.5;
+    try{await sess.release()}catch(err){}
+    self.postMessage({type:'done',mono},[mono.buffer]);
+  }catch(err){post({type:'error',msg:String((err&&err.message)||err)})}
+};`;
+async function decode44k(blob){
+  const ctx=new (window.AudioContext||window.webkitAudioContext)(),buf=await ctx.decodeAudioData(await blob.arrayBuffer());ctx.close();
+  if(buf.duration>900)throw new Error('la canción dura más de 15 minutos');
+  const off=new OfflineAudioContext(2,Math.max(1,Math.ceil(buf.duration*44100)),44100),src=off.createBufferSource();
+  src.buffer=buf;src.connect(off.destination);src.start();
+  const r=await off.startRendering();return[r.getChannelData(0).slice(),r.getChannelData(1).slice()];
+}
+async function to16k(mono,sr){
+  const buf=new AudioBuffer({length:mono.length,sampleRate:sr,numberOfChannels:1});buf.copyToChannel(mono,0);
+  const off=new OfflineAudioContext(1,Math.max(1,Math.ceil(mono.length/sr*16000)),16000),src=off.createBufferSource();
+  src.buffer=buf;src.connect(off.destination);src.start();
+  return (await off.startRendering()).getChannelData(0).slice();
+}
+async function sepModel(url,onProg){
+  try{const c=await adbGet('model:'+url);if(c&&c.buf)return c.buf}catch(e){}
+  const r=await fetch(url);if(!r.ok)throw new Error('no se pudo descargar el modelo de separación ('+r.status+')');
+  const total=+r.headers.get('content-length')||0,rd=r.body.getReader(),parts=[];let got=0;
+  for(;;){const x=await rd.read();if(x.done)break;parts.push(x.value);got+=x.value.length;onProg(got,total)}
+  const u=new Uint8Array(got);let o=0;for(const q of parts){u.set(q,o);o+=q.length}
+  try{await adbSet('model:'+url,{buf:u.buffer,size:got})}catch(e){}
+  return u.buffer;
+}
+function sepWorkerRun(model,device,l,r){
+  return new Promise((res,rej)=>{
+    let w;auRej=rej;
+    try{w=new Worker(URL.createObjectURL(new Blob([SEP_WORKER],{type:'text/javascript'})))}
+    catch(e){return rej(new Error('este navegador no pudo crear el proceso de fondo de la separación'))}
+    auSep=w;
+    w.onmessage=ev=>{
+      const m=ev.data;
+      if(m.type==='done'){w.terminate();auSep=null;res(m.mono)}
+      else if(m.type==='error'){w.terminate();auSep=null;rej(new Error(m.net?'no se pudo descargar la librería de separación (revisá tu conexión a internet): '+m.msg:m.msg))}
+      else if(m.type==='status'){auBase=m.msg;$('aust').textContent=auBase}
+      else if(m.type==='prog'){
+        const pc=m.done/m.total,el=(Date.now()-auT0b)/1000,eta=m.done>0?Math.round(el/m.done*(m.total-m.done)):0;
+        $('aubi').classList.remove('ind');$('aubi').style.width=(pc*100).toFixed(1)+'%';
+        auBase='Separando la voz… '+Math.round(pc*100)+'% (tramo '+m.done+' de '+m.total+(eta?', faltan unos '+(eta>90?Math.round(eta/60)+' min':eta+' s'):'')+')';$('aust').textContent=auBase;
+      }
+    };
+    w.onerror=ev=>rej(new Error('falló el proceso de separación'+(ev.message?' ('+ev.message+')':'')));
+    $('aubi').classList.add('ind');auT0b=Date.now();
+    w.postMessage({cmd:'sep',model,device,ortUrl:ORT_BASE+(device==='webgpu'?'ort.webgpu.min.js':'ort.min.js'),ortBase:ORT_BASE,l,r},[l.buffer,r.buffer]);
+  });
+}
+async function sepRun(){
+  const attempts=(await hasGPU())?['webgpu','wasm']:['wasm'];let lastErr=null;
+  for(const d of attempts){
+    try{
+      auBase='Descargando el modelo de separación…';$('aust').textContent=auBase;$('aubi').classList.remove('ind');
+      const model=await sepModel(SEP_URL[d],(g,t)=>{const pc=t?g/t:0;$('aubi').style.width=(pc*100).toFixed(1)+'%';auBase='Descargando el modelo de separación… '+Math.round(pc*100)+'% ('+(g/1048576).toFixed(0)+(t?' de '+(t/1048576).toFixed(0):'')+' MB)';$('aust').textContent=auBase});
+      if(auCancel)throw new Error('cancelado');
+      auBase='Preparando el audio para separarlo…';$('aust').textContent=auBase;
+      const [l,r]=await decode44k(audioBlob);
+      if(auCancel)throw new Error('cancelado');
+      const mono=await sepWorkerRun(model,d,l,r);
+      auBase='Terminando…';$('aust').textContent=auBase;
+      return await to16k(mono,44100);
+    }catch(e){
+      if(auCancel||e.message==='cancelado')throw e;
+      lastErr=e;if(d==='webgpu'){auBase='La placa de video falló al separar la voz ('+e.message+'); pruebo con el procesador…';$('aust').textContent=auBase}
+    }
+  }
+  throw lastErr;
+}
+async function getVocals(){
+  const id=PR.cur,sig=(audioName||'')+'|'+audioBlob.size+'|kimv2';
+  if(vocalsMem&&vocalsMem.id===id&&vocalsMem.sig===sig)return{data:vocalsMem.data,cached:true};
+  try{const c=await adbGet('vocals:'+id);if(c&&c.sig===sig&&c.data){vocalsMem={id,sig,data:c.data};return{data:c.data,cached:true}}}catch(e){}
+  const data=await sepRun();
+  vocalsMem={id,sig,data};try{await adbSet('vocals:'+id,{sig,data})}catch(e){}
+  return{data,cached:false};
+}
+function wav16(a,sr){
+  const n=a.length,b=new ArrayBuffer(44+n*2),v=new DataView(b),W=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+  W(0,'RIFF');v.setUint32(4,36+n*2,true);W(8,'WAVE');W(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);W(36,'data');v.setUint32(40,n*2,true);
+  let mx=0;for(let i=0;i<n;i++)mx=Math.max(mx,Math.abs(a[i]));const g=mx>0?.9/mx:1;
+  for(let i=0;i<n;i++)v.setInt16(44+i*2,Math.round(Math.max(-1,Math.min(1,a[i]*g))*32767),true);
+  return new Blob([b],{type:'audio/wav'});
+}
+$('ausl').onclick=async()=>{
+  const id=PR.cur;if(!id)return;let d=vocalsMem&&vocalsMem.id===id?vocalsMem.data:null;
+  if(!d){try{const c=await adbGet('vocals:'+id);d=c&&c.data}catch(e){}}
+  if(!d){note('No encuentro la voz separada de este proyecto: volvé a correr la sincronización con la separación activada.');return}
+  const au=$('ausa');if(au.src)URL.revokeObjectURL(au.src);au.src=URL.createObjectURL(wav16(d,16000));au.hidden=false;au.play().catch(()=>{});
+};
 
 /* ===== Audio guardado por proyecto (IndexedDB) ===== */
 let adb=null;
@@ -1541,7 +1821,7 @@ $('pkl').onclick=e=>{
   if(b.classList.contains('pco')){if(id===PR.cur)closePicker();else openProj(id)}
   else if(b.classList.contains('pcd')){
     const p=PR.list[id];if(!confirm('¿Borrar el proyecto «'+p.name+'»? No se puede deshacer.'))return;
-    adbDel(id).catch(()=>{});delete PR.list[id];if(id===PR.cur){unloadAudio();PR.cur=null;L=[];P={l:0,w:0};H=[];R=[];render();updH();pjUI()}
+    adbDel(id).catch(()=>{});adbDel('vocals:'+id).catch(()=>{});delete PR.list[id];if(id===PR.cur){unloadAudio();PR.cur=null;L=[];P={l:0,w:0};H=[];R=[];render();updH();pjUI()}
     savePR();pkRender();
   }
 };
