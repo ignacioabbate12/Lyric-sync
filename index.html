@@ -720,7 +720,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.3',PK='lyricsync_projects';
+const APP_VERSION='3.4',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1362,13 +1362,22 @@ async function ortLoad(file){
 }
 let auSep=null,vocalsMem=null,auT0b=0;
 const SEP_WORKER=[mdxPlan,mdxFFT,mdxSTFT,mdxWsum,mdxISTFT,mdxDemix].map(f=>f.toString()).join('\n')+`
+const loadOrt=async m=>{
+    const errs=[];
+    try{const mod={exports:{}};new Function('module','exports',m.ortSrc).call(self,mod,mod.exports);
+      const c=[self.ort,mod.exports,mod.exports&&mod.exports.default].find(x=>x&&x.InferenceSession);if(c){self.ort=c;return}errs.push('modo clásico: no expuso la API')}catch(e){errs.push('modo clásico: '+e.message)}
+    try{const ns=await import('data:text/javascript;charset=utf-8,'+encodeURIComponent(m.ortSrc));
+      const c=[self.ort,ns,ns.default].find(x=>x&&x.InferenceSession);if(c){self.ort=c;return}errs.push('modo módulo: no expuso la API')}catch(e){errs.push('modo módulo: '+e.message)}
+    try{importScripts(m.ortBase+m.ortFile);if(self.ort&&self.ort.InferenceSession)return;errs.push('importScripts: no expuso la API')}catch(e){errs.push('importScripts: '+e.message)}
+    throw new Error('la librería cargó pero no se inicializó ('+errs.join(' | ')+')');
+  };
 let ort=null;
 const post=x=>self.postMessage(x);
 self.onmessage=async e=>{
   const m=e.data;if(!m||m.cmd!=='sep')return;
   try{
     if(!ort){
-      try{(0,eval)(m.ortSrc);if(!self.ort)throw new Error('la librería cargó pero no se inicializó')}catch(err){post({type:'error',net:true,msg:String((err&&err.message)||err)});return}
+      try{await loadOrt(m)}catch(err){post({type:'error',net:true,msg:String((err&&err.message)||err)});return}
       ort=self.ort;ort.env.wasm.wasmPaths=m.ortBase;ort.env.wasm.numThreads=1;
     }
     post({type:'status',msg:'Preparando el modelo de separación…'});
@@ -1423,7 +1432,7 @@ async function sepWorkerRun(model,device,l,r){
     };
     w.onerror=ev=>rej(new Error('falló el proceso de separación'+(ev.message?' ('+ev.message+')':'')));
     $('aubi').classList.add('ind');auT0b=Date.now();
-    w.postMessage({cmd:'sep',model,device,ortSrc:ortL.src,ortBase:ortL.base,l,r},[l.buffer,r.buffer]);
+    w.postMessage({cmd:'sep',model,device,ortSrc:ortL.src,ortFile:(device==='webgpu'?'ort.webgpu.min.js':'ort.min.js'),ortBase:ortL.base,l,r},[l.buffer,r.buffer]);
   });
 }
 async function sepRun(){
