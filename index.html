@@ -720,7 +720,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.1',PK='lyricsync_projects';
+const APP_VERSION='3.2',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1441,7 +1441,7 @@ async function getVocals(){
   if(vocalsMem&&vocalsMem.id===id&&vocalsMem.sig===sig)return{data:vocalsMem.data,cached:true};
   try{const c=await adbGet('vocals:'+id);if(c&&c.sig===sig&&c.data){vocalsMem={id,sig,data:c.data};return{data:c.data,cached:true}}}catch(e){}
   const data=await sepRun();
-  vocalsMem={id,sig,data};try{await adbSet('vocals:'+id,{sig,data})}catch(e){}
+  vocalsMem={id,sig,data};try{await adbSet('vocals:'+id,{sig,data})}catch(e){note('Ojo: no pude guardar la voz separada en el navegador; se va a perder al cerrar la app.')}
   return{data,cached:false};
 }
 function wav16(a,sr){
@@ -1455,7 +1455,16 @@ $('ausep').addEventListener('change',()=>{const p=PR.list[PR.cur];$('ausl').hidd
 $('ausl').onclick=async()=>{
   const id=PR.cur;if(!id)return;let d=vocalsMem&&vocalsMem.id===id?vocalsMem.data:null;
   if(!d){try{const c=await adbGet('vocals:'+id);d=c&&c.data}catch(e){}}
-  if(!d){note('No encuentro la voz separada de este proyecto: volvé a correr la sincronización con la separación activada.');return}
+  if(!d){
+    if(!audioBlob){note('Este proyecto no tiene audio cargado.');return}
+    if(auBusy)return;
+    auCancel=false;auPass='';auBase='Separando la voz…';auT0=Date.now();auUI(true,auBase);$('aubi').style.width='0';
+    try{const v=await getVocals();d=v.data}
+    catch(e){if(!auCancel&&e.message!=='cancelado')auUI(false,'No se pudo separar la voz: '+e.message);return}
+    if(auCancel)return;
+    auUI(false,'Voz separada lista.');
+    if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR()}
+  }
   const au=$('ausa');if(au.src)URL.revokeObjectURL(au.src);au.src=URL.createObjectURL(wav16(d,16000));au.hidden=false;au.play().catch(()=>{});
 };
 
