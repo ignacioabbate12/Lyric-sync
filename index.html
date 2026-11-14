@@ -251,7 +251,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <div class="row">
     <label class="mu"><input id="auk" type="checkbox" checked> No tocar las palabras que ya tienen tiempo</label>
     <label class="mu"><input id="aus2" type="checkbox" checked> Ajustar a golpes de voz</label>
-    <label class="mu"><input id="aus3" type="checkbox" checked> Dejar pausas donde el audio se calla</label>
+    <label class="mu"><input id="aus3" type="checkbox" checked> Dejar pausas donde el audio se calla (y separar cada frase de la siguiente cuando la voz respira)</label>
     <label class="mu" title="Aísla la voz con un modelo de separación (MDX-Net Kim Vocal 2) y analiza solo la voz, sin batería ni guitarras. Descarga unos 33 MB la primera vez."><input id="ausep" type="checkbox"> <b>Separar la voz de los instrumentos</b> antes de analizar (con placa de video tarda poco; sin ella puede tardar muchos minutos)</label>
     <label class="mu" title="Escucha la canción 3 veces con ajustes distintos y combina los resultados: rescata palabras que una pasada no oyó y marca las dudosas"><input id="aupr" type="checkbox"> <b>Modo preciso</b> (3 pasadas combinadas, tarda unas 3 veces más)</label>
     <label class="mu" title="Cuando termina el emparejamiento, mira los avisos de problemas del programa (palabras estimadas, dudosas, que se pisan, duraciones raras) y vuelve a escuchar solo esos tramos, uno por uno, para corregirlos. Solo acepta un cambio si no empeora los avisos."><input id="aurep" type="checkbox"> <b>Repasar los avisos de error</b> al terminar (vuelve a escuchar solo los tramos con problemas)</label>
@@ -818,6 +818,30 @@ async function mdxDemix(ch,run,opt,onProg){
   return[outL,outR];
 }
 /* envolvente (máximo por 4 ms, normalizada) de una señal de 16 kHz, en el mismo formato que la onda */
+/* Entre el final de una frase y el principio de la siguiente casi siempre hay un respiro. Whisper pega las palabras (el fin de una = el
+   inicio de la otra), así que se busca en la voz aislada el silencio más largo entre las dos. a = inicio de la última palabra de la frase,
+   b = inicio (según Whisper) de la primera de la siguiente, cap = inicio de la segunda palabra de la siguiente */
+function lineGap(pk,pps,a,b,cap){
+  if(!pk||!pk.length)return{ok:false,why:'sin envolvente de voz'};
+  if(b-a<.3)return{ok:false,why:'frase demasiado corta'};
+  const lo=Math.max(0,Math.floor((a-.5)*pps)),hi=Math.min(pk.length-1,Math.floor(Math.min(b+1.5,cap+.5)*pps));
+  if(hi-lo<8)return{ok:false,why:'sin audio en esa zona'};
+  const w=Math.max(1,Math.round(.03*pps)),sm=new Float32Array(hi-lo+1);
+  for(let i=lo;i<=hi;i++){let t=0,c=0;for(let k=Math.max(lo,i-w);k<=Math.min(hi,i+w);k++){t+=pk[k];c++}sm[i-lo]=t/c}
+  const srt=Array.from(sm).sort((x,y)=>x-y),ref=srt[Math.floor(srt.length*.9)],fl=srt[Math.floor(srt.length*.02)];
+  if(ref-fl<.03)return{ok:false,why:'la voz casi no suena en esa zona'};
+  const thr=fl+.15*(ref-fl),minLen=Math.round(.10*pps);
+  const iA=Math.floor((a+.2)*pps),iB=Math.min(hi,Math.floor(Math.min(b+1.0,cap-.05)*pps));
+  if(iB-iA<minLen+2)return{ok:false,why:'tramo demasiado corto para buscar'};
+  let best=null,run=0,mn=1e9;
+  for(let i=iA;i<=iB;i++){
+    const v=sm[i-lo];if(v<mn)mn=v;
+    if(v<thr)run++;
+    else{if(run>=minLen){const g={s:(i-run)/pps,e:i/pps};if(g.e>=b-.15&&(!best||g.e-g.s>best.e-best.s))best=g}run=0}
+  }
+  if(!best)return{ok:false,why:'sin silencio de 0,10 s o más (el mínimo llega al '+Math.round((ref>0?mn/ref:0)*100)+'% del nivel de la voz)'};
+  return{ok:true,e0:best.s+.02,s1:best.e-.03,len:best.e-best.s};
+}
 function envFrom(a,sr,pps){
   const k=Math.max(1,Math.round(sr/pps)),n=Math.ceil(a.length/k),pk=new Float32Array(n);let mx=0;
   for(let i=0;i<n;i++){let m=0;const e=Math.min(a.length,(i+1)*k);for(let j=i*k;j<e;j++){const v=Math.abs(a[j]);if(v>m)m=v}pk[i]=m;if(m>mx)mx=m}
@@ -857,7 +881,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.9',PK='lyricsync_projects';
+const APP_VERSION='3.10',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1164,6 +1188,26 @@ function snapIn(arr,t,tol){
   return best==null?t:r3(best);
 }
 function snapT(t,tol){return snapIn(onsets,t,tol)}
+/* separa cada frase de la siguiente donde la voz realmente se calla; devuelve cuántas separó y deja el detalle en AUR.gaps */
+function refineLineGaps(L,pk,tset,keep){
+  const lines=L.filter(l=>!l.bg&&l.w.length);let n=0;
+  if(AUR)AUR.gaps=[];
+  for(let i=0;i+1<lines.length;i++){
+    const A=lines[i].w,B=lines[i+1].w,last=A[A.length-1],first=B[0],c=B[1]||null;
+    const rec={l:L.indexOf(lines[i])+1,t0:last.e!=null?last.e:null,t1:first.s};
+    if(AUR)AUR.gaps.push(rec);
+    if(last.s==null||first.s==null){rec.why='palabras sin tiempo';continue}
+    if(keep&&!(tset.has(last)&&tset.has(first))){rec.why='respetada (ya tenía tiempo)';continue}
+    const cap=c&&c.s!=null?c.s:first.s+1.2;
+    const g=lineGap(pk,PPS,last.s,first.s,cap);
+    if(!g.ok){rec.why=g.why;continue}
+    const ne=r3(Math.max(last.s+.12,g.e0)),ns=r3(g.s1);
+    if(ns>=cap-.05||ns<ne){rec.why='silencio hallado pero incoherente con las palabras vecinas';continue}
+    last.e=ne;first.s=ns;if(first.e!=null&&first.e<=ns+.03)first.e=null;
+    rec.ok=true;rec.fin=ne;rec.ini=ns;n++;
+  }
+  return n;
+}
 /* acerca la palabra xs[i] al golpe de voz más cercano, pero sin dejarla pegada (menos de 50 ms) a sus vecinas */
 function snapGuard(xs,i,arr){
   const x=xs[i];if(!x||x.s==null)return;
@@ -1539,6 +1583,9 @@ $('aurun').onclick=async()=>{
         repNote=rp.txt;AUR.rep=rp;AUR.stages.push(['repaso de avisos',Date.now()]);
       }catch(e){if(auCancel||e.message==='cancelado')return;repNote=' · el repaso de avisos falló ('+e.message+'), quedó el resultado del emparejamiento'}
     }
+    let gapN=0;
+    if($('aus3').checked&&pkV){try{gapN=refineLineGaps(L,pkV,new Set(r.touched),$('auk').checked)}catch(e){}}
+    else if(AUR)AUR.gaps=null;
     P=firstOpen();render();save();
     let msg;
     if(r.passes>1){
@@ -1546,7 +1593,7 @@ $('aurun').onclick=async()=>{
     }else{
       msg='Listo: '+r.matched+' de '+r.total+' palabras reconocidas exactas · '+r.near+' ubicadas por posición (borde punteado) · '+r.est+' estimadas (borde amarillo discontinuo)';
     }
-    msg+=sepNote+repNote+(r.kept?' · '+r.kept+' ya marcadas se respetaron':'')+(paus?' · '+paus+' pausas dejadas donde el audio se calla':'')+'. Revisá en la onda; Ctrl+Z lo deshace todo.';
+    msg+=sepNote+repNote+(gapN?' · '+gapN+' frases separadas de la siguiente donde la voz se calla':'')+(r.kept?' · '+r.kept+' ya marcadas se respetaron':'')+(paus?' · '+paus+' pausas dejadas donde el audio se calla':'')+'. Revisá en la onda; Ctrl+Z lo deshace todo.';
     if(r.total&&r.matched/r.total<.5)msg+=' El reconocimiento fue flojo: probá el modelo Turbo (con WebGPU) o el modo preciso.';
     auUI(false,msg);
   }catch(e){
@@ -1606,6 +1653,10 @@ function aurText(){
     H('REPASO DE AVISOS');P(A.rep.txt.replace(/^ · /,''));
     A.rep.log.forEach((e,i)=>{P('tramo '+(i+1)+(e.lo!=null?' ['+f2(e.lo)+' – '+f2(e.hi)+' s]':'')+(e.enh?' (voz realzada)':'')+': '+e.res+(e.nota?'  ['+e.nota+']':''));P('   palabras: '+e.words.join(' '));if(e.heard)P('   lo que oyó: '+e.heard.join(' '))});
   }
+  if(A.gaps){
+    H('FRONTERAS ENTRE FRASES (separación según el silencio de la voz aislada)');
+    A.gaps.forEach(g=>P('línea '+g.l+' → '+(g.l+1)+': '+(g.ok?'SEPARADAS · la frase termina en '+f2(g.fin)+' y la siguiente empieza en '+f2(g.ini)+' (respiro de '+(g.ini-g.fin).toFixed(2)+' s)':'sin cambios · '+g.why+' · fin '+f2(g.t0)+' / inicio siguiente '+f2(g.t1))));
+  }else if(A.opts.pausas)P('\n(Separación entre frases no aplicada: hace falta activar «Separar la voz de los instrumentos».)');
   if(r){
     H('PALABRA POR PALABRA  (línea.palabra | letra | inicio | fin | origen | oyó | pasadas | marcas)');
     P('origen: oída = coincide con lo que oyó el modelo · posición = ubicada entre palabras oídas · estimada = sin nada oído que usar');
