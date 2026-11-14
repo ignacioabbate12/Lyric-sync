@@ -263,7 +263,7 @@ dialog p{margin:6px 0;color:var(--mu)}
       <label class="mu"><input id="auseg" type="checkbox"> Usar tiempos por frase (más estables que por palabra)</label>
     </div>
   </details>
-  <div class="row"><button id="aurun" class="pri">Sincronizar automáticamente</button><button id="aucan" hidden>Cancelar</button><button id="ausl" hidden title="Reproduce la voz aislada para comprobar qué tan bien quedó">Oír la voz separada</button><span id="aust" class="mu"></span></div>
+  <div class="row"><button id="aurun" class="pri">Sincronizar automáticamente</button><button id="aucan" hidden>Cancelar</button><button id="aurepdl" hidden title="Baja un archivo de texto con todo lo que hizo la sincronización: ajustes, qué oyó el modelo, qué palabras quedaron dudosas y los avisos. Sirve para pasarlo y revisar los errores.">Descargar resumen</button><button id="ausl" hidden title="Reproduce la voz aislada para comprobar qué tan bien quedó">Oír la voz separada</button><span id="aust" class="mu"></span></div>
   <div id="aubar" hidden><i id="aubi"></i></div>
   <audio id="ausa" controls hidden style="width:100%;margin-top:10px"></audio>
 </details>
@@ -432,9 +432,9 @@ function alignWords(lw,aw){
     else if(i>0&&(dir===1||j===0))i--;else j--;
   }
   const anchors=[];match.forEach((q,k)=>{if(q>=0)anchors.push([k,q])});
-  if(!anchors.length)return{res:null,matched:0,total:n};
+  if(!anchors.length)return{res:null,matched:0,total:n,extra:aw.map(w=>({n:w.n,s:w.s}))};
   const res=new Array(n).fill(null),AVG=.4,MAXP=.8;
-  anchors.forEach(([k,q])=>{const w=aw[q];res[k]={s:w.s,e:w.e>w.s?w.e:w.s+.25,src:'asr',ex:w.n===lw[k]}});
+  anchors.forEach(([k,q])=>{const w=aw[q];res[k]={s:w.s,e:w.e>w.s?w.e:w.s+.25,src:'asr',ex:w.n===lw[k],h:w.n}});
   const wt=k=>Math.max(2,lw[k].length);
   /* esqueleto: los k lyrics del hueco se reparten sobre el tiempo hablado de las palabras que el modelo sí escuchó ahí */
   const skel=(ids,ws)=>{
@@ -464,7 +464,8 @@ function alignWords(lw,aw){
     ids.forEach((k,x)=>{res[k]=out[x]});
   }
   for(let q=1;q<n;q++){if(res[q].s<res[q-1].s+.01)res[q].s=res[q-1].s+.01;if(res[q].e<res[q].s)res[q].e=res[q].s+.15}
-  return{res,matched:anchors.length,near:res.filter(r=>r.src==='near').length,total:n};
+  const used=new Set(anchors.map(a=>a[1]));
+  return{res,matched:anchors.length,near:res.filter(r=>r.src==='near').length,total:n,extra:aw.filter((w,j)=>!used.has(j)).map(w=>({n:w.n,s:w.s}))};
 }
 /* Alinea UNA pasada del modelo con la letra: devuelve un resultado por palabra de la letra */
 function alignRun(lw,idx,chunks){
@@ -474,7 +475,7 @@ function alignRun(lw,idx,chunks){
   const full=new Array(lw.length).fill(null);idx.forEach((i,k)=>{full[i]=al.res[k]});
   for(let i=0;i<full.length;i++)if(!full[i]){let pv=null;for(let k=i-1;k>=0;k--)if(full[k]){pv=full[k];break}
     const nx=full.slice(i+1).find(f=>f);const t=pv?pv.e:(nx?nx.s:0);full[i]={s:t,e:t+.2,src:'interp'}}
-  full.asrCount=aw.length;
+  full.asrCount=aw.length;full.extra=al.extra||[];
   return full;
 }
 /* Combina varias pasadas: cada palabra toma la mediana de los tiempos de las pasadas que la detectaron;
@@ -488,7 +489,7 @@ function mergeFulls(fulls){
     const c=runs.map(r=>r[i]),A=c.filter(x=>x.src==='asr'),N=c.filter(x=>x.src==='near'),I=c.filter(x=>x.src==='interp');
     const pool=A.length?A:(N.length?N:I),src=A.length?'asr':(N.length?'near':'interp');
     const starts=[...A,...N].map(x=>x.s),spread=starts.length>1?Math.max(...starts)-Math.min(...starts):0;
-    out.push({s:med(pool.map(x=>x.s)),e:med(pool.map(x=>x.e)),src,n:A.length,spread,ex:A.some(x=>x.ex),dud:src!=='interp'&&spread>.4});
+    out.push({s:med(pool.map(x=>x.s)),e:med(pool.map(x=>x.e)),src,n:A.length,spread,ex:A.some(x=>x.ex),hs:A.map(x=>x.h),dud:src!=='interp'&&spread>.4});
   }
   return{full:out,runs:runs.length};
 }
@@ -498,14 +499,14 @@ function applyAlign(L,chunks,opt){
   const runs=(chunks.length&&Array.isArray(chunks[0]))?chunks:[chunks];
   const refs=[];L.forEach(ln=>{if(ln.bg)return;ln.w.forEach(x=>refs.push({ln,x}))});
   const lw=refs.map(r=>normW(r.x.t)),idx=lw.map((w,i)=>i).filter(i=>lw[i].length);
-  const mg=mergeFulls(runs.map(ch=>alignRun(lw,idx,ch)));
+  const fl=runs.map(ch=>alignRun(lw,idx,ch)),mg=mergeFulls(fl);
   if(!mg)return null;
   const full=mg.full,multi=mg.runs>1;
-  const est=[],near=[],dud=[],fuzz=[],touched=[];let matched=0,kept=0,agreed=0,rescued=0;
+  const est=[],near=[],dud=[],fuzz=[],touched=[],keptSet=new Set();let matched=0,kept=0,agreed=0,rescued=0;
   const dd=[];refs.forEach((r,i)=>{const f=full[i];if(f.src==='asr'&&f.e>f.s)dd.push(f.e-f.s)});dd.sort((a,b)=>a-b);
   const cap=Math.min(4,Math.max(2,(dd.length?dd[dd.length>>1]:.4)*8));
   refs.forEach((r,i)=>{
-    if(opt.keep&&r.x.s!=null){kept++;return}
+    if(opt.keep&&r.x.s!=null){kept++;keptSet.add(r.x);return}
     const f=full[i],nx=refs[i+1],nf=nx&&nx.ln===r.ln?full[i+1]:null;
     r.x.s=r3(f.s);r.x.e=null;touched.push(r.x);
     if(nf&&f.src!=='interp'&&f.e<nf.s-.12)r.x.e=r3(Math.max(f.e,f.s+.08));
@@ -531,7 +532,7 @@ function applyAlign(L,chunks,opt){
     ln.w[n-1].e=r3(pe);bgN+=n;
   });
   return{matched,near:near.length,total:refs.length,kept,est:est.length,bg:bgN,passes:mg.runs,agreed,rescued,dud:dud.length,
-    estWords:est,nearWords:near,dudWords:dud,fuzzWords:fuzz,touched};
+    estWords:est,nearWords:near,dudWords:dud,fuzzWords:fuzz,touched,fulls:fl,detail:refs.map((r,i)=>({x:r.x,li:L.indexOf(r.ln),k:r.ln.w.indexOf(r.x),f:full[i],kept:keptSet.has(r.x)}))};
 }
 /* instante donde el audio se calla entre dos palabras (o null si no hay silencio claro); pk = envolvente, pps = puntos por segundo */
 function energyEnd(pk,pps,s,n){
@@ -555,7 +556,7 @@ async function repairPass(o){
   const touched=new Set(o.r.touched),flagged=new Set([...o.r.estWords,...o.r.nearWords,...o.r.dudWords,...(o.r.fuzzWords||[])]);
   const issues=()=>check(L).filter(x=>!x.soft);
   const before=issues().length,fixedSet=new Set();
-  let wins=0,skipped=0,reverted=0,n=0;
+  let wins=0,skipped=0,reverted=0,n=0;const log=[];
   const attempts=o.dec[false]?[false,true]:[true];
   for(const enh of attempts){
     const flat=[];L.forEach((ln,li)=>{if(!ln.bg)ln.w.forEach(x=>flat.push({x,ln,li}))});
@@ -578,10 +579,10 @@ async function repairPass(o){
       const i0=Math.max(0,c.a-2),i1=Math.min(flat.length-1,c.b+2);
       let t0=null;for(let i=i0;i<=i1&&t0==null;i++)if(flat[i].x.s!=null)t0=flat[i].x.s;
       const lx=flat[i1].x,nx=flat[i1+1]&&flat[i1+1].x.s;
-      if(t0==null){skipped++;continue}
+      if(t0==null){skipped++;log.push({enh,res:'omitido: sin tiempos de referencia',words:flat.slice(i0,i1+1).map(f=>f.x.t)});continue}
       const t1=lx.e!=null?lx.e:(nx!=null?nx:(lx.s!=null?lx.s+.6:t0+1));
       const lo=Math.max(0,t0-.8);let hi=Math.min(dur,t1+.8);if(hi-lo<2)hi=Math.min(dur,lo+2);
-      if(hi-lo>28||hi<=lo||done>=40){skipped++;continue}
+      if(hi-lo>28||hi<=lo||done>=40){skipped++;log.push({enh,lo,hi,res:done>=40?'omitido: límite de 40 tramos':'omitido: tramo demasiado largo ('+(hi-lo).toFixed(0)+' s)',words:flat.slice(i0,i1+1).map(f=>f.x.t)});continue}
       done++;n++;
       auPass='';auBase='Repasando los avisos… tramo '+done+' de '+Math.min(cl.length,40)+(enh?' (con la voz realzada)':'');$('aust').textContent=auBase;
       $('aubi').classList.remove('ind');$('aubi').style.width=(done/Math.min(cl.length,40)*100).toFixed(1)+'%';
@@ -593,13 +594,15 @@ async function repairPass(o){
       try{
         const pc=Object.assign({},o.cfg,{chunk:30,__off:lo});
         chunks=await (o.mock?window.__asrMock(audio,pc,auMsg):auCall(o.w,{cmd:'run',id:1000+n,audio,model:o.cfg.model,device:o.cfg.device,lang:o.cfg.lang,dtype:o.cfg.dtype||null,chunk:30,seg:o.cfg.seg}));
-      }catch(e){if(auCancel||e.message==='cancelado')throw e;skipped++;continue}
+      }catch(e){if(auCancel||e.message==='cancelado')throw e;skipped++;log.push({enh,lo,hi,res:'falló la escucha: '+e.message,words:flat.slice(i0,i1+1).map(f=>f.x.t)});continue}
       if(auCancel)throw new Error('cancelado');
       const lw=[],idx=[];for(let i=i0;i<=i1;i++){const w=normW(flat[i].x.t);lw.push(w);if(w.length)idx.push(lw.length-1)}
       const al=alignRun(lw,idx,chunks.map(k=>({t:k.t,s:k.s+lo,e:k.e==null?null:k.e+lo})));
+      const ent={enh,lo,hi,words:flat.slice(i0,i1+1).map(f=>f.x.t),heard:chunks.map(k=>String(k.t).trim()+'@'+(k.s+lo).toFixed(2)),res:'sin coincidencias'};log.push(ent);
       if(!al)continue;
       const l0=Math.max(0,flat[i0].li-1),l1=Math.min(L.length-1,flat[i1].li+1);
       const snap=[];for(let li=l0;li<=l1;li++)L[li].w.forEach(x=>snap.push([x,x.s,x.e]));
+      const oldS=new Map(snap.map(q=>[q[0],q[1]]));
       const cb=issues().length,changed=[];
       for(let i=i0;i<=i1;i++){
         const f=flat[i],a=al[i-i0];
@@ -610,7 +613,7 @@ async function repairPass(o){
         if(nv!=null&&s>=nv-.005)continue;
         f.x.s=s;f.x.e=null;changed.push(i);
       }
-      if(!changed.length)continue;
+      if(!changed.length){ent.res='sin cambios (ninguna palabra sospechosa se pudo confirmar)';continue}
       changed.forEach(i=>{
         const f=flat[i],a=al[i-i0],nf=flat[i+1],same=nf&&nf.ln===f.ln;
         if(same){const na=al[i+1-i0];if(a.e<(nf.x.s!=null?nf.x.s:(na?na.s:1e9))-.12)f.x.e=r3(Math.max(a.e,f.x.s+.08))}
@@ -622,7 +625,8 @@ async function repairPass(o){
         const x=flat[i].x,nf=flat[i+1],nn=nf&&nf.x.s!=null?nf.x.s:(x.e!=null?x.e:x.s+.6),q=energyEnd(o.pkE,PPS,x.s,nn);
         if(q!=null&&nn-q>=.2&&(x.e==null||q<x.e-.05))x.e=r3(q);
       });
-      if(issues().length>cb){snap.forEach(([x,s,e])=>{x.s=s;x.e=e});reverted++;continue}
+      if(issues().length>cb){snap.forEach(([x,s,e])=>{x.s=s;x.e=e});reverted++;ent.res='descartado: empeoraba los avisos';continue}
+      ent.res='aceptado: '+changed.map(i=>flat[i].x.t+' '+(oldS.get(flat[i].x)==null?'—':oldS.get(flat[i].x).toFixed(2))+'→'+flat[i].x.s.toFixed(2)).join(', ');
       wins++;changed.forEach(i=>{const x=flat[i].x;fixedSet.add(x);aiSet.delete(x);aiSet2.delete(x);aiSet3.delete(x)});
     }
   }
@@ -630,7 +634,7 @@ async function repairPass(o){
   let txt;
   if(!n)txt=' · repaso de avisos: no había tramos con problemas que volver a escuchar';
   else txt=' · repaso de avisos: se volvió a escuchar '+n+' tramo'+(n>1?'s':'')+', '+conf+' palabra'+(conf===1?'':'s')+' confirmada'+(conf===1?'':'s')+' o corregida'+(conf===1?'':'s')+', avisos del programa '+before+' → '+after+(reverted?' ('+reverted+' cambio'+(reverted>1?'s':'')+' descartado'+(reverted>1?'s':'')+' por empeorar los avisos)':'')+(skipped?' · '+skipped+' tramo'+(skipped>1?'s':'')+' no se pudo'+(skipped>1?'ieron':'')+' repasar':'');
-  return{txt,before,after,fixed:conf,wins,reverted,skipped,n};
+  return{txt,before,after,fixed:conf,wins,reverted,skipped,n,log,fixedWords:[...fixedSet]};
 }
 
 /* ===== Separación de voz (MDX-Net «Kim Vocal 2»): matemática ===== */
@@ -806,7 +810,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.5',PK='lyricsync_projects';
+const APP_VERSION='3.7',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1247,6 +1251,17 @@ let audioBlob=null,auW=null,auRej=null,auBusy=false,auCancel=false,auBase='',auP
 const aiSet=new WeakSet(),aiSet2=new WeakSet(),aiSet3=new WeakSet(),TURBO='onnx-community/whisper-large-v3-turbo_timestamped';
 const AU_WORKER=`let T=null,tr=null,key='';
 const post=x=>self.postMessage(x);
+/* copia guardada de los modelos en IndexedDB (la misma tecnología que guarda el audio de cada proyecto) */
+const idbCache=(()=>{
+  let db=null;
+  const open=()=>db||(db=new Promise((res,rej)=>{const r=indexedDB.open('lyricsync_models',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+  const tx=async(mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction('f',mode),q=fn(t.objectStore('f'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})};
+  const key=k=>typeof k==='string'?k:((k&&k.url)||String(k));
+  return{
+    async match(k){try{const r=await tx('readonly',s=>s.get(key(k)));if(!r||!r.blob)return undefined;return new Response(r.blob,{status:200,headers:{'content-type':r.type||'application/octet-stream','content-length':String(r.blob.size)}})}catch(e){return undefined}},
+    async put(k,resp){try{const blob=await resp.blob();await tx('readwrite',s=>s.put({blob,type:resp.headers.get('content-type')||''},key(k)))}catch(e){}}
+  };
+})();
 function segToWords(segs){
   const out=[];
   segs.forEach(sg=>{
@@ -1265,10 +1280,16 @@ self.onmessage=async e=>{
     }
     const k=m.model+'|'+m.device+'|'+JSON.stringify(m.dtype||null);
     if(!tr||key!==k){
-      post({type:'status',msg:'Descargando el modelo (solo la primera vez)…'});
+      post({type:'status',msg:'Cargando el modelo (si es la primera vez, se descarga y queda guardado)…'});
       const po={device:m.device,progress_callback:p=>{if(p&&p.status==='progress')post({type:'dl',file:p.file,loaded:p.loaded,total:p.total})}};
       if(m.dtype)po.dtype=m.dtype;
-      tr=await T.pipeline('automatic-speech-recognition',m.model,po);
+      try{T.env.useBrowserCache=false;T.env.useCustomCache=true;T.env.customCache=idbCache;tr=await T.pipeline('automatic-speech-recognition',m.model,po)}
+      catch(err1){
+        /* si la copia propia diera problemas, se vuelve al sistema normal de la librería */
+        post({type:'status',msg:'Cargando el modelo (modo alternativo)…'});
+        T.env.useCustomCache=false;T.env.useBrowserCache=true;
+        tr=await T.pipeline('automatic-speech-recognition',m.model,po);
+      }
       key=k;
     }
     post({type:'status',msg:'Escuchando la canción…'});
@@ -1358,6 +1379,10 @@ $('aurun').onclick=async()=>{
   const precise=$('aupr').checked,passes=precise?PASSES:[{chunk:cfg.chunk,enh:$('aufx').checked,pad:0}];
   auCancel=false;auDl={};auPass='';auBase='Preparando el audio…';auT0=Date.now();
   auUI(true,auBase);$('aubi').style.width='0';
+  AUR={t0:Date.now(),ver:APP_VERSION,cfg:Object.assign({},cfg),precise,song:audioName||'',dur:null,stages:[],passInfo:[],raw:null,r:null,sepNote:'',sepInfo:null,rep:null,preCheck:null,
+    opts:{keep:$('auk').checked,snap:$('aus2').checked,pausas:$('aus3').checked,separar:$('ausep').checked,repaso:$('aurep').checked,realce:$('aufx').checked,corta:$('aush').checked,porFrase:$('auseg').checked},
+    lines:L.filter(l=>!l.bg).length,words:L.reduce((a,l)=>a+(l.bg?0:l.w.length),0),bgWords:L.reduce((a,l)=>a+(l.bg?l.w.length:0),0)};
+  $('aurepdl').hidden=true;
   clearInterval(auTick);auTick=setInterval(()=>{if($('aubi').classList.contains('ind'))$('aust').textContent=auBase+' ('+Math.round((Date.now()-auT0)/1000)+' s, puede tardar varios minutos)'},1000);
   try{
     let vocals=null,sepNote='',pkV=null,onsV=null;
@@ -1374,6 +1399,7 @@ $('aurun').onclick=async()=>{
       }
       if(auCancel)return;
     }
+    if($('ausep').checked){AUR.sepNote=sepNote;AUR.sepInfo=sepInfo;AUR.stages.push(['separación de voz',Date.now()])}
     const dec={},runs=[],mock=typeof window.__asrMock==='function';let failed=0,w=null;
     if(!mock)w=auOpen();
     try{
@@ -1384,14 +1410,17 @@ $('aurun').onclick=async()=>{
         auBase=pre+'Preparando el audio…';$('aust').textContent=auBase;$('aubi').classList.remove('ind');
         if(!dec[P.enh])dec[P.enh]=vocals?(P.enh?await filter16k(vocals):vocals.slice()):await decode16k(audioBlob,P.enh);
         if(auCancel)return;
+        AUR.dur=dec[P.enh].length/16000;
         const audio=padA(dec[P.enh],P.pad),pc=Object.assign({},cfg,{chunk:P.chunk});
         auBase=pre+'Cargando el modelo…';$('aust').textContent=auBase;
         try{
           const chunks=await (mock?window.__asrMock(audio,pc,auMsg):auCall(w,{cmd:'run',id:k,audio,model:cfg.model,device:cfg.device,lang:cfg.lang,dtype:cfg.dtype||null,chunk:P.chunk,seg:cfg.seg}));
           if(auCancel)return;
+          AUR.passInfo.push({k:k+1,chunk:P.chunk,pad:P.pad,enh:P.enh,n:chunks.length});AUR.stages.push(['pasada '+(k+1),Date.now()]);
           runs.push(chunks.map(c=>({t:c.t,s:Math.max(0,c.s-P.pad),e:c.e==null?null:c.e-P.pad})).filter(c=>c.s>=0&&(c.e==null||c.e>0)));
         }catch(e){
           if(auCancel||e.message==='cancelado')return;
+          AUR.passInfo.push({k:k+1,err:e.message});
           if(k===0)throw e;
           failed++;
         }
@@ -1399,6 +1428,7 @@ $('aurun').onclick=async()=>{
     }finally{if(!$('aurep').checked)auClose()}
     if(auCancel)return;
     const before=snapS(),r=applyAlign(L,runs.length>1?runs:runs[0],{keep:$('auk').checked});
+    AUR.raw=runs;AUR.r=r;AUR.stages.push(['emparejamiento',Date.now()]);
     if(!r){auUI(false,'El modelo no reconoció nada que coincida con tu letra. Probá con el modelo Turbo (si tu navegador tiene WebGPU), revisá el idioma o usá las opciones avanzadas.');return}
     H.push(before);if(H.length>150)H.shift();R.length=0;updH();
     const onA=onsV||onsets;
@@ -1417,12 +1447,13 @@ $('aurun').onclick=async()=>{
       });
     }
     r.estWords.forEach(x=>aiSet.add(x));r.nearWords.forEach(x=>aiSet2.add(x));r.dudWords.forEach(x=>aiSet3.add(x));
+    AUR.preCheck=check(L).filter(x=>!x.soft).map(x=>x.m+' (línea '+(x.l+1)+(x.w!=null?', palabra '+(x.w+1):'')+')');
     let repNote='';
     if($('aurep').checked){
       try{
         const rp=await repairPass({w,mock,cfg,dec,r,keep:$('auk').checked,snap:$('aus2').checked&&onA.length>0,onA,paus:$('aus3').checked&&!!pkE,pkE});
         if(auCancel)return;
-        repNote=rp.txt;
+        repNote=rp.txt;AUR.rep=rp;AUR.stages.push(['repaso de avisos',Date.now()]);
       }catch(e){if(auCancel||e.message==='cancelado')return;repNote=' · el repaso de avisos falló ('+e.message+'), quedó el resultado del emparejamiento'}
     }
     P=firstOpen();render();save();
@@ -1438,9 +1469,74 @@ $('aurun').onclick=async()=>{
   }catch(e){
     if(auCancel||e.message==='cancelado')return;
     auUI(false,'No se pudo sincronizar: '+e.message);
-  }finally{auClose()}
+  }finally{auClose();auFinish()}
 };
 hasGPU().then(g=>{if(g){$('aum').value=TURBO;$('aud').value='webgpu'}else{$('aum').value='onnx-community/whisper-small_timestamped';$('aud').value='wasm'}});
+
+/* ===== Resumen descargable de la sincronización automática ===== */
+function auFinish(){
+  if(!AUR)return;
+  AUR.end=Date.now();AUR.status=$('aust').textContent;
+  try{AUR.finalCheck=check(L).map(x=>x.m+' (línea '+(x.l+1)+(x.w!=null?', palabra '+(x.w+1):'')+')')}catch(e){AUR.finalCheck=[]}
+  $('aurepdl').hidden=false;
+}
+function aurText(){
+  const A=AUR;if(!A)return'';
+  const f2=v=>v==null||!isFinite(v)?'—':(+v).toFixed(2),ts=v=>v==null?'—':Math.floor(v/60)+':'+(v%60).toFixed(2).padStart(5,'0');
+  const o=[],P=x=>o.push(x),H=t=>{o.push('');o.push('=== '+t+' ===')};
+  P('LYRIC SYNC · RESUMEN DE LA SINCRONIZACIÓN AUTOMÁTICA');
+  P('Versión de la app: '+A.ver+' · Fecha: '+new Date(A.t0).toLocaleString()+' · Navegador: '+navigator.userAgent);
+  P('Canción: '+(A.song||'—')+' · duración '+(A.dur?ts(A.dur):'—')+' · '+A.lines+' líneas · '+A.words+' palabras'+(A.bgWords?' (+ '+A.bgWords+' de voz de fondo)':''));
+  P('Duración total del proceso: '+((A.end-A.t0)/1000).toFixed(0)+' s');
+  H('RESULTADO');P(A.status||'—');
+  H('AJUSTES');
+  P('Modelo: '+A.cfg.model+' · motor: '+A.cfg.device+' · idioma: '+A.cfg.lang+(A.cfg.dtype?' · precisión fp16':''));
+  P('Modo preciso: '+(A.precise?'sí':'no')+' · separar voz: '+(A.opts.separar?'sí':'no')+' · repasar avisos: '+(A.opts.repaso?'sí':'no'));
+  P('No tocar lo que ya tenía tiempo: '+(A.opts.keep?'sí':'no')+' · ajustar a golpes de voz: '+(A.opts.snap?'sí':'no')+' · dejar pausas: '+(A.opts.pausas?'sí':'no'));
+  P('Avanzadas: realzar voz '+(A.opts.realce?'sí':'no')+' · ventanas de 15 s '+(A.opts.corta?'sí':'no')+' · tiempos por frase '+(A.opts.porFrase?'sí':'no'));
+  H('TIEMPOS POR ETAPA');
+  let prev=A.t0;A.stages.forEach(([n,t])=>{P(n+': '+((t-prev)/1000).toFixed(1)+' s');prev=t});
+  if(A.opts.separar){H('SEPARACIÓN DE VOZ');P(A.sepNote||'no se completó');if(A.sepInfo){P('motor usado: '+(A.sepInfo.dev||'ninguno'));(A.sepInfo.tries||[]).forEach(t=>P('intento fallido: '+t))}}
+  H('PASADAS DE WHISPER');
+  A.passInfo.forEach(p=>P('pasada '+p.k+(p.err?': FALLÓ · '+p.err:': ventana '+p.chunk+' s · margen '+p.pad+' s · realce '+(p.enh?'sí':'no')+' · '+p.n+' palabras oídas')));
+  const r=A.r;
+  if(r){
+    H('CIFRAS');
+    P('Palabras de la letra: '+r.total+' · exactas: '+r.matched+' · por posición: '+r.near+' · estimadas: '+r.est+' · dudosas: '+r.dud+' · reconocidas distinto de la letra: '+(r.fuzzWords?r.fuzzWords.length:0)+' · respetadas (ya tenían tiempo): '+r.kept);
+    if(r.passes>1)P('Coinciden en 2 o más pasadas: '+r.agreed+' · las oyó una sola pasada: '+r.rescued);
+  }
+  H('AVISOS DEL PROGRAMA');
+  P('Justo antes del repaso: '+(A.preCheck?A.preCheck.length:'—'));(A.preCheck||[]).forEach(m=>P('  · '+m));
+  P('Al final: '+(A.finalCheck?A.finalCheck.length:'—'));(A.finalCheck||[]).forEach(m=>P('  · '+m));
+  if(A.rep){
+    H('REPASO DE AVISOS');P(A.rep.txt.replace(/^ · /,''));
+    A.rep.log.forEach((e,i)=>{P('tramo '+(i+1)+(e.lo!=null?' ['+f2(e.lo)+' – '+f2(e.hi)+' s]':'')+(e.enh?' (voz realzada)':'')+': '+e.res);P('   palabras: '+e.words.join(' '));if(e.heard)P('   lo que oyó: '+e.heard.join(' '))});
+  }
+  if(r){
+    H('PALABRA POR PALABRA  (línea.palabra | letra | inicio | fin | origen | oyó | pasadas | marcas)');
+    P('origen: oída = coincide con lo que oyó el modelo · posición = ubicada entre palabras oídas · estimada = sin nada oído que usar');
+    const fixed=new Set(A.rep?A.rep.fixedWords:[]);let lastL=-1;
+    r.detail.forEach(d=>{
+      if(d.li!==lastL){lastL=d.li;P('-- línea '+(d.li+1)+': "'+L[d.li].w.map(x=>x.t).join(' ')+'"')}
+      const f=d.f||{},x=d.x,fl=[];
+      if(d.kept)fl.push('respetada');if(f.dud)fl.push('DUDOSA (pasadas discrepan '+f2(f.spread)+' s)');if(f.src==='asr'&&f.ex===false)fl.push('reconocida distinto');if(fixed.has(x))fl.push('REPASADA');
+      if(!d.kept&&f.s!=null&&x.s!=null&&Math.abs(x.s-f.s)>.15)fl.push('movida desde '+f2(f.s)+' (ajustes/repaso)');
+      const heard=f.hs&&f.hs.length?f.hs.join('/'):(f.h||'');
+      P((d.li+1)+'.'+(d.k+1)+' | '+x.t+' | '+f2(x.s)+' | '+f2(x.e)+' | '+(f.src==='asr'?'oída':f.src==='near'?'posición':'estimada')+' | '+(heard||'—')+' | '+(f.n!=null?f.n:(f.src==='asr'?1:0))+' | '+fl.join(', '));
+    });
+    H('LO QUE EL MODELO OYÓ Y NO ESTÁ EN LA LETRA (por pasada)');
+    (r.fulls||[]).forEach((fu,k)=>{const ex=fu&&fu.extra||[];P('pasada '+(k+1)+': '+(ex.length?ex.map(e=>e.n+'@'+f2(e.s)).join(' '):'nada'))});
+  }
+  if(A.raw){H('TRANSCRIPCIÓN CRUDA DE CADA PASADA (palabra@segundo)');A.raw.forEach((ch,k)=>P('pasada '+(k+1)+': '+ch.map(c=>String(c.t).trim()+'@'+f2(c.s)).join(' ')))}
+  return o.join('\n')+'\n';
+}
+$('aurepdl').onclick=()=>{
+  const txt=aurText();if(!txt){note('Todavía no hay una sincronización para resumir.');return}
+  const d=new Date(),z=n=>String(n).padStart(2,'0'),safe=(AUR.song||'cancion').replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N}]+/gu,'-').slice(0,40);
+  const a2=document.createElement('a');a2.href=URL.createObjectURL(new Blob([txt],{type:'text/plain;charset=utf-8'}));
+  a2.download='resumen-sincronizacion-'+safe+'-'+d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'-'+z(d.getHours())+z(d.getMinutes())+'.txt';
+  document.body.appendChild(a2);a2.click();setTimeout(()=>{URL.revokeObjectURL(a2.href);a2.remove()},1500);
+};
 
 /* ===== Separación de voz (MDX-Net Kim Vocal 2, en el navegador) ===== */
 const SEP_URL={webgpu:'https://huggingface.co/uddompang/kamvox-voice-separator/resolve/main/kim-vocal-2.fp16.onnx',wasm:'https://huggingface.co/uddompang/kamvox-voice-separator/resolve/main/kim-vocal-2.onnx'};
@@ -1454,7 +1550,7 @@ async function ortLoad(file){
   }
   const er=new Error('no se pudo descargar la librería de separación desde ningún servidor, último intento: '+last+'. Puede estar bloqueada por tu red, antivirus o una extensión (adblock)');er.net=true;throw er;
 }
-let auSep=null,vocalsMem=null,auT0b=0;
+let auSep=null,vocalsMem=null,auT0b=0,sepInfo=null,AUR=null;
 const SEP_WORKER=[mdxPlan,mdxFFT,mdxSTFT,mdxWsum,mdxISTFT,mdxDemix].map(f=>f.toString()).join('\n')+`
 const loadOrt=async m=>{
     const errs=[];
@@ -1530,7 +1626,7 @@ async function sepWorkerRun(model,device,l,r){
   });
 }
 async function sepRun(){
-  const attempts=(await hasGPU())?['webgpu','wasm']:['wasm'];let lastErr=null;
+  const attempts=(await hasGPU())?['webgpu','wasm']:['wasm'];let lastErr=null;sepInfo={tries:[],dev:null};
   for(const d of attempts){
     try{
       auBase='Descargando el modelo de separación…';$('aust').textContent=auBase;$('aubi').classList.remove('ind');
@@ -1541,10 +1637,10 @@ async function sepRun(){
       if(auCancel)throw new Error('cancelado');
       const mono=await sepWorkerRun(model,d,l,r);
       auBase='Terminando…';$('aust').textContent=auBase;
-      return await to16k(mono,44100);
+      const out16=await to16k(mono,44100);sepInfo.dev=d;return out16;
     }catch(e){
       if(auCancel||e.message==='cancelado')throw e;
-      lastErr=e;if(d==='webgpu'){auBase='La placa de video falló al separar la voz ('+e.message+'); pruebo con el procesador…';$('aust').textContent=auBase}
+      lastErr=e;sepInfo.tries.push(d+': '+e.message);if(d==='webgpu'){auBase='La placa de video falló al separar la voz ('+e.message+'); pruebo con el procesador…';$('aust').textContent=auBase}
     }
   }
   throw lastErr;
