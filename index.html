@@ -467,6 +467,18 @@ function alignWords(lw,aw){
   const used=new Set(anchors.map(a=>a[1]));
   return{res,matched:anchors.length,near:res.filter(r=>r.src==='near').length,total:n,extra:aw.filter((w,j)=>!used.has(j)).map(w=>({n:w.n,s:w.s}))};
 }
+/* Whisper a veces «colapsa» los tiempos: varias palabras seguidas con el mismo segundo (casi siempre el borde de la ventana) o más allá del
+   final del audio. Esos tiempos no sirven; se descartan antes de emparejar */
+function cleanChunks(ch,maxT){
+  const out=[];let dropped=0;
+  for(let i=0;i<ch.length;){
+    let j=i;while(j+1<ch.length&&Math.abs(ch[j+1].s-ch[i].s)<.03)j++;
+    if(j-i+1>=3)dropped+=j-i+1;else for(let k=i;k<=j;k++)out.push(ch[k]);
+    i=j+1;
+  }
+  const res=out.filter(c=>{if(maxT!=null&&c.s>maxT+.5){dropped++;return false}return true});
+  return{chunks:res,dropped};
+}
 /* Alinea UNA pasada del modelo con la letra: devuelve un resultado por palabra de la letra */
 function alignRun(lw,idx,chunks){
   const aw=chunks.map(c=>({n:normW(c.t||''),s:+c.s,e:c.e==null?NaN:+c.e})).filter(w=>w.n&&isFinite(w.s)).map(w=>({n:w.n,s:w.s,e:isFinite(w.e)?w.e:w.s+.3}));
@@ -484,12 +496,24 @@ function mergeFulls(fulls){
   const runs=fulls.filter(Boolean);if(!runs.length)return null;
   if(runs.length===1)return{full:runs[0],runs:1};
   const med=a=>{const b=[...a].sort((x,y)=>x-y);return b.length%2?b[b.length>>1]:(b[b.length/2-1]+b[b.length/2])/2};
+  /* agrupa los tiempos que coinciden (dentro de 0,6 s): manda la mayoría y un valor aislado no arrastra a los demás */
+  const clusters=a=>{const q=[...a].sort((x,y)=>x.s-y.s),cl=[];q.forEach(x=>{const c=cl[cl.length-1];if(c&&x.s-c[0].s<=.6)c.push(x);else cl.push([x])});return cl.sort((x,y)=>y.length-x.length)};
   const n=runs[0].length,out=[];
   for(let i=0;i<n;i++){
     const c=runs.map(r=>r[i]),A=c.filter(x=>x.src==='asr'),N=c.filter(x=>x.src==='near'),I=c.filter(x=>x.src==='interp');
-    const pool=A.length?A:(N.length?N:I),src=A.length?'asr':(N.length?'near':'interp');
+    const cand=A.length?A:(N.length?N:I),src=A.length?'asr':(N.length?'near':'interp');
+    let pool=cand,dud=false;
     const starts=[...A,...N].map(x=>x.s),spread=starts.length>1?Math.max(...starts)-Math.min(...starts):0;
-    out.push({s:med(pool.map(x=>x.s)),e:med(pool.map(x=>x.e)),src,n:A.length,spread,ex:A.some(x=>x.ex),hs:A.map(x=>x.h),dud:src!=='interp'&&spread>.4});
+    if(src!=='interp'&&cand.length>1){
+      const cl=clusters(cand);let best=cl[0];
+      if(cl.length>1&&cl[1].length===cl[0].length){
+        const pv=out.length?out[out.length-1].s:null,sc=g=>pv==null?0:Math.abs(med(g.map(x=>x.s))-(pv+.4));
+        best=cl.filter(g=>g.length===cl[0].length).reduce((x,y)=>sc(x)<=sc(y)?x:y);
+      }
+      pool=best;
+      dud=best.length<2||Math.max(...best.map(x=>x.s))-Math.min(...best.map(x=>x.s))>.4;
+    }
+    out.push({s:med(pool.map(x=>x.s)),e:med(pool.map(x=>x.e)),src,n:pool.length,spread,ex:A.some(x=>x.ex),hs:A.map(x=>x.h),dud});
   }
   return{full:out,runs:runs.length};
 }
@@ -556,8 +580,18 @@ async function repairPass(o){
   const touched=new Set(o.r.touched),flagged=new Set([...o.r.estWords,...o.r.nearWords,...o.r.dudWords,...(o.r.fuzzWords||[])]);
   const issues=()=>check(L).filter(x=>!x.soft);
   const before=issues().length,fixedSet=new Set();
-  let wins=0,skipped=0,reverted=0,n=0;const log=[];
+  let wins=0,skipped=0,reverted=0,n=0,retried=0;const log=[];
   const attempts=o.dec[false]?[false,true]:[true];
+  const listen=async(enh,lo,hi,k)=>{
+    const a0=Math.floor(lo*16000),a1=Math.min(base.length,Math.ceil(hi*16000));
+    let audio;
+    if(enh){audio=o.dec[true]?o.dec[true].slice(a0,a1):await filter16k(o.dec[false].slice(a0,a1))}
+    else audio=(o.dec[false]||o.dec[true]).slice(a0,a1);
+    const maxT=audio.length/16000,pc=Object.assign({},o.cfg,{chunk:30,__off:lo});
+    const ch=await (o.mock?window.__asrMock(audio,pc,auMsg):auCall(o.w,{cmd:'run',id:1000+k,audio,model:o.cfg.model,device:o.cfg.device,lang:o.cfg.lang,dtype:o.cfg.dtype||null,chunk:30,seg:o.cfg.seg}));
+    const cc=cleanChunks(ch,maxT);
+    return{chunks:cc.chunks,dropped:cc.dropped,lo,hi};
+  };
   for(const enh of attempts){
     const flat=[];L.forEach((ln,li)=>{if(!ln.bg)ln.w.forEach(x=>flat.push({x,ln,li}))});
     const pos=new Map();flat.forEach((f,i)=>pos.set(f.x,i));
@@ -573,32 +607,44 @@ async function repairPass(o){
     const bi=[];flat.forEach((f,i)=>{if(bad.has(f.x))bi.push(i)});
     if(!bi.length)break;
     const cl=[];bi.forEach(i=>{const c=cl[cl.length-1];if(c&&i-c.b<=4)c.b=i;else cl.push({a:i,b:i})});
-    let done=0;
-    for(const c of cl){
+    /* los grupos muy largos se parten en trozos de 12 palabras para escucharlos de a poco */
+    const parts=[];
+    cl.forEach(c=>{
+      const ts=flat[c.a].x.s,te=flat[c.b].x.s;
+      if(ts!=null&&te!=null&&te-ts>18&&c.b-c.a>12){for(let s0=c.a;s0<=c.b;s0+=12)parts.push({a:s0,b:Math.min(c.b,s0+11)})}
+      else parts.push(c);
+    });
+    const tot=Math.min(parts.length,60);let done=0;
+    for(const c of parts){
       if(auCancel)throw new Error('cancelado');
       const i0=Math.max(0,c.a-2),i1=Math.min(flat.length-1,c.b+2);
       let t0=null;for(let i=i0;i<=i1&&t0==null;i++)if(flat[i].x.s!=null)t0=flat[i].x.s;
       const lx=flat[i1].x,nx=flat[i1+1]&&flat[i1+1].x.s;
       if(t0==null){skipped++;log.push({enh,res:'omitido: sin tiempos de referencia',words:flat.slice(i0,i1+1).map(f=>f.x.t)});continue}
       const t1=lx.e!=null?lx.e:(nx!=null?nx:(lx.s!=null?lx.s+.6:t0+1));
-      const lo=Math.max(0,t0-.8);let hi=Math.min(dur,t1+.8);if(hi-lo<2)hi=Math.min(dur,lo+2);
-      if(hi-lo>28||hi<=lo||done>=40){skipped++;log.push({enh,lo,hi,res:done>=40?'omitido: límite de 40 tramos':'omitido: tramo demasiado largo ('+(hi-lo).toFixed(0)+' s)',words:flat.slice(i0,i1+1).map(f=>f.x.t)});continue}
+      let lo=Math.max(0,t0-.8),hi=Math.min(dur,t1+.8);if(hi-lo<2)hi=Math.min(dur,lo+2);
+      if(hi-lo>28||hi<=lo||done>=60){skipped++;log.push({enh,lo,hi,res:done>=60?'omitido: límite de 60 tramos':'omitido: tramo demasiado largo ('+(hi-lo).toFixed(0)+' s)',words:flat.slice(i0,i1+1).map(f=>f.x.t)});continue}
       done++;n++;
-      auPass='';auBase='Repasando los avisos… tramo '+done+' de '+Math.min(cl.length,40)+(enh?' (con la voz realzada)':'');$('aust').textContent=auBase;
-      $('aubi').classList.remove('ind');$('aubi').style.width=(done/Math.min(cl.length,40)*100).toFixed(1)+'%';
-      const a0=Math.floor(lo*16000),a1=Math.min(base.length,Math.ceil(hi*16000));
-      let audio;
-      if(enh){audio=o.dec[true]?o.dec[true].slice(a0,a1):await filter16k(o.dec[false].slice(a0,a1))}
-      else audio=(o.dec[false]||o.dec[true]).slice(a0,a1);
-      let chunks;
+      auPass='';auBase='Repasando los avisos… tramo '+done+' de '+tot+(enh?' (con la voz realzada)':'');$('aust').textContent=auBase;
+      $('aubi').classList.remove('ind');$('aubi').style.width=(done/tot*100).toFixed(1)+'%';
+      let got,nota='';
       try{
-        const pc=Object.assign({},o.cfg,{chunk:30,__off:lo});
-        chunks=await (o.mock?window.__asrMock(audio,pc,auMsg):auCall(o.w,{cmd:'run',id:1000+n,audio,model:o.cfg.model,device:o.cfg.device,lang:o.cfg.lang,dtype:o.cfg.dtype||null,chunk:30,seg:o.cfg.seg}));
+        got=await listen(enh,lo,hi,n);
+        if(got.dropped)nota=got.dropped+' palabras descartadas por tiempos inválidos';
+        /* si casi no quedó nada utilizable (tiempos colapsados), se repite con más margen alrededor */
+        if(got.chunks.length<Math.ceil(.6*(i1-i0+1))){
+          const lo2=Math.max(0,lo-1.5),hi2=Math.min(dur,hi+1.5);
+          if((lo2<lo||hi2>hi)&&hi2-lo2<=30){
+            const g2=await listen(enh,lo2,hi2,n+500);retried++;nota+=(nota?' · ':'')+'se repitió con 1,5 s más de margen';
+            if(g2.chunks.length>got.chunks.length)got=g2;
+          }
+        }
       }catch(e){if(auCancel||e.message==='cancelado')throw e;skipped++;log.push({enh,lo,hi,res:'falló la escucha: '+e.message,words:flat.slice(i0,i1+1).map(f=>f.x.t)});continue}
+      lo=got.lo;hi=got.hi;const chunks=got.chunks;
       if(auCancel)throw new Error('cancelado');
       const lw=[],idx=[];for(let i=i0;i<=i1;i++){const w=normW(flat[i].x.t);lw.push(w);if(w.length)idx.push(lw.length-1)}
+      const ent={enh,lo,hi,nota,words:flat.slice(i0,i1+1).map(f=>f.x.t),heard:chunks.map(k=>String(k.t).trim()+'@'+(k.s+lo).toFixed(2)),res:'sin coincidencias'};log.push(ent);
       const al=alignRun(lw,idx,chunks.map(k=>({t:k.t,s:k.s+lo,e:k.e==null?null:k.e+lo})));
-      const ent={enh,lo,hi,words:flat.slice(i0,i1+1).map(f=>f.x.t),heard:chunks.map(k=>String(k.t).trim()+'@'+(k.s+lo).toFixed(2)),res:'sin coincidencias'};log.push(ent);
       if(!al)continue;
       const l0=Math.max(0,flat[i0].li-1),l1=Math.min(L.length-1,flat[i1].li+1);
       const snap=[];for(let li=l0;li<=l1;li++)L[li].w.forEach(x=>snap.push([x,x.s,x.e]));
@@ -619,12 +665,13 @@ async function repairPass(o){
         if(same){const na=al[i+1-i0];if(a.e<(nf.x.s!=null?nf.x.s:(na?na.s:1e9))-.12)f.x.e=r3(Math.max(a.e,f.x.s+.08))}
         else{let e=Math.min(a.e,f.x.s+3);if(nf&&nf.x.s!=null)e=Math.min(e,nf.x.s);f.x.e=r3(Math.max(e,f.x.s+.12))}
       });
-      if(o.snap)changed.forEach(i=>{flat[i].x.s=snapIn(o.onA,flat[i].x.s,.08)});
+      if(o.snap){const xs=flat.map(f=>f.x);changed.forEach(i=>snapGuard(xs,i,o.onA))}
       for(let li=l0;li<=l1;li++){let pv=-1;L[li].w.forEach(x=>{if(x.s!=null){if(x.s<pv)x.s=r3(pv+.01);pv=x.s}})}
       if(o.paus)changed.forEach(i=>{
         const x=flat[i].x,nf=flat[i+1],nn=nf&&nf.x.s!=null?nf.x.s:(x.e!=null?x.e:x.s+.6),q=energyEnd(o.pkE,PPS,x.s,nn);
         if(q!=null&&nn-q>=.2&&(x.e==null||q<x.e-.05))x.e=r3(q);
       });
+      changed.forEach(i=>{const x=flat[i].x,nf=flat[i+1];if(x.e!=null&&nf&&nf.x.s!=null&&x.e>nf.x.s)x.e=r3(Math.max(x.s+.03,nf.x.s))});
       if(issues().length>cb){snap.forEach(([x,s,e])=>{x.s=s;x.e=e});reverted++;ent.res='descartado: empeoraba los avisos';continue}
       ent.res='aceptado: '+changed.map(i=>flat[i].x.t+' '+(oldS.get(flat[i].x)==null?'—':oldS.get(flat[i].x).toFixed(2))+'→'+flat[i].x.s.toFixed(2)).join(', ');
       wins++;changed.forEach(i=>{const x=flat[i].x;fixedSet.add(x);aiSet.delete(x);aiSet2.delete(x);aiSet3.delete(x)});
@@ -633,7 +680,7 @@ async function repairPass(o){
   const after=issues().length,conf=[...fixedSet].length;
   let txt;
   if(!n)txt=' · repaso de avisos: no había tramos con problemas que volver a escuchar';
-  else txt=' · repaso de avisos: se volvió a escuchar '+n+' tramo'+(n>1?'s':'')+', '+conf+' palabra'+(conf===1?'':'s')+' confirmada'+(conf===1?'':'s')+' o corregida'+(conf===1?'':'s')+', avisos del programa '+before+' → '+after+(reverted?' ('+reverted+' cambio'+(reverted>1?'s':'')+' descartado'+(reverted>1?'s':'')+' por empeorar los avisos)':'')+(skipped?' · '+skipped+' tramo'+(skipped>1?'s':'')+' no se pudo'+(skipped>1?'ieron':'')+' repasar':'');
+  else txt=' · repaso de avisos: se volvió a escuchar '+n+' tramo'+(n>1?'s':'')+(retried?' ('+retried+' repetido'+(retried>1?'s':'')+' con más margen)':'')+', '+conf+' palabra'+(conf===1?'':'s')+' confirmada'+(conf===1?'':'s')+' o corregida'+(conf===1?'':'s')+', avisos del programa '+before+' → '+after+(reverted?' ('+reverted+' cambio'+(reverted>1?'s':'')+' descartado'+(reverted>1?'s':'')+' por empeorar los avisos)':'')+(skipped?' · '+skipped+(skipped>1?' tramos no se pudieron repasar':' tramo no se pudo repasar'):'');
   return{txt,before,after,fixed:conf,wins,reverted,skipped,n,log,fixedWords:[...fixedSet]};
 }
 
@@ -810,7 +857,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.7',PK='lyricsync_projects';
+const APP_VERSION='3.9',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1117,6 +1164,13 @@ function snapIn(arr,t,tol){
   return best==null?t:r3(best);
 }
 function snapT(t,tol){return snapIn(onsets,t,tol)}
+/* acerca la palabra xs[i] al golpe de voz más cercano, pero sin dejarla pegada (menos de 50 ms) a sus vecinas */
+function snapGuard(xs,i,arr){
+  const x=xs[i];if(!x||x.s==null)return;
+  const c=snapIn(arr,x.s,.08);if(c===x.s)return;
+  const pv=i>0?xs[i-1].s:null,nx=i+1<xs.length?xs[i+1].s:null;
+  if((pv==null||c-pv>=.05)&&(nx==null||nx-c>=.05))x.s=c;
+}
 function snapSel(k){
   const wd=selWord();if(!wd||!onsets.length)return;const q=wv.sel,t0=k==='s'?wd.s:effE(L[q.l],q.w),t1=snapT(t0,.3);
   if(t1===t0)return;hist();if(k==='s')wd.s=t1;else wd.e=t1;render();save();
@@ -1253,13 +1307,33 @@ const AU_WORKER=`let T=null,tr=null,key='';
 const post=x=>self.postMessage(x);
 /* copia guardada de los modelos en IndexedDB (la misma tecnología que guarda el audio de cada proyecto) */
 const idbCache=(()=>{
-  let db=null;
+  let db=null;const CH=33554432,st={hit:[],put:[],fail:[]};
   const open=()=>db||(db=new Promise((res,rej)=>{const r=indexedDB.open('lyricsync_models',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
   const tx=async(mode,fn)=>{const d=await open();return new Promise((res,rej)=>{const t=d.transaction('f',mode),q=fn(t.objectStore('f'));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})};
   const key=k=>typeof k==='string'?k:((k&&k.url)||String(k));
-  return{
-    async match(k){try{const r=await tx('readonly',s=>s.get(key(k)));if(!r||!r.blob)return undefined;return new Response(r.blob,{status:200,headers:{'content-type':r.type||'application/octet-stream','content-length':String(r.blob.size)}})}catch(e){return undefined}},
-    async put(k,resp){try{const blob=await resp.blob();await tx('readwrite',s=>s.put({blob,type:resp.headers.get('content-type')||''},key(k)))}catch(e){}}
+  const short=k=>String(key(k)).split('/').slice(-2).join('/');
+  const mb=n=>(n/1048576).toFixed(0)+' MB';
+  return{st,
+    async match(k){
+      try{
+        const kk=key(k),m=await tx('readonly',s=>s.get(kk));
+        if(!m)return undefined;
+        if(m.blob){st.hit.push(short(k)+' ('+mb(m.blob.size)+')');return new Response(m.blob,{status:200,headers:{'content-type':m.type||'application/octet-stream','content-length':String(m.blob.size)}})}
+        if(!m.n)return undefined;
+        const parts=await Promise.all(Array.from({length:m.n},(_,i)=>tx('readonly',s=>s.get(kk+'#'+i))));
+        if(parts.some(x=>!x)){st.fail.push('copia incompleta de '+short(k));return undefined}
+        const blob=new Blob(parts,{type:m.type||'application/octet-stream'});
+        st.hit.push(short(k)+' ('+mb(blob.size)+')');
+        return new Response(blob,{status:200,headers:{'content-type':m.type||'application/octet-stream','content-length':String(blob.size)}});
+      }catch(e){st.fail.push('lectura de '+short(k)+': '+((e&&e.name)||'')+' '+((e&&e.message)||e));return undefined}
+    },
+    async put(k,resp){
+      try{
+        const blob=await resp.blob(),kk=key(k),n=Math.max(1,Math.ceil(blob.size/CH));
+        await tx('readwrite',s=>{for(let i=0;i<n;i++)s.put(blob.slice(i*CH,Math.min(blob.size,(i+1)*CH)),kk+'#'+i);return s.put({n,type:resp.headers.get('content-type')||'',size:blob.size},kk)});
+        st.put.push(short(k)+' ('+mb(blob.size)+')');
+      }catch(e){st.fail.push('escritura de '+short(k)+': '+((e&&e.name)||'')+' '+((e&&e.message)||e))}
+    }
   };
 })();
 function segToWords(segs){
@@ -1283,13 +1357,16 @@ self.onmessage=async e=>{
       post({type:'status',msg:'Cargando el modelo (si es la primera vez, se descarga y queda guardado)…'});
       const po={device:m.device,progress_callback:p=>{if(p&&p.status==='progress')post({type:'dl',file:p.file,loaded:p.loaded,total:p.total})}};
       if(m.dtype)po.dtype=m.dtype;
+      let cmode='copia propia en IndexedDB';
       try{T.env.useBrowserCache=false;T.env.useCustomCache=true;T.env.customCache=idbCache;tr=await T.pipeline('automatic-speech-recognition',m.model,po)}
       catch(err1){
         /* si la copia propia diera problemas, se vuelve al sistema normal de la librería */
+        cmode='sistema normal de la librería (la copia propia falló: '+String((err1&&err1.message)||err1)+')';
         post({type:'status',msg:'Cargando el modelo (modo alternativo)…'});
         T.env.useCustomCache=false;T.env.useBrowserCache=true;
-        tr=await T.pipeline('automatic-speech-recognition',m.model,po);
+        try{tr=await T.pipeline('automatic-speech-recognition',m.model,po)}catch(err2){post({type:'cacheinfo',mode:cmode,st:idbCache.st});throw err2}
       }
+      post({type:'cacheinfo',mode:cmode,st:idbCache.st});
       key=k;
     }
     post({type:'status',msg:'Escuchando la canción…'});
@@ -1339,6 +1416,7 @@ function auUI(busy,msg){
 function auMsg(m){
   const pre=auPass?auPass+' · ':'';
   if(m.type==='status'){auBase=pre+m.msg;if(/Escuchando/.test(m.msg)){$('aubi').classList.add('ind');auT0=Date.now()}}
+  else if(m.type==='cacheinfo'){if(AUR)AUR.cache=m}
   else if(m.type==='dl'&&m.total){
     auDl[m.file]={l:m.loaded,t:m.total};let l=0,t=0;for(const k in auDl){l+=auDl[k].l;t+=auDl[k].t}
     const pc=t?l/t:0;$('aubi').classList.remove('ind');$('aubi').style.width=(pc*100).toFixed(1)+'%';
@@ -1383,6 +1461,7 @@ $('aurun').onclick=async()=>{
     opts:{keep:$('auk').checked,snap:$('aus2').checked,pausas:$('aus3').checked,separar:$('ausep').checked,repaso:$('aurep').checked,realce:$('aufx').checked,corta:$('aush').checked,porFrase:$('auseg').checked},
     lines:L.filter(l=>!l.bg).length,words:L.reduce((a,l)=>a+(l.bg?0:l.w.length),0),bgWords:L.reduce((a,l)=>a+(l.bg?l.w.length:0),0)};
   $('aurepdl').hidden=true;
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
   clearInterval(auTick);auTick=setInterval(()=>{if($('aubi').classList.contains('ind'))$('aust').textContent=auBase+' ('+Math.round((Date.now()-auT0)/1000)+' s, puede tardar varios minutos)'},1000);
   try{
     let vocals=null,sepNote='',pkV=null,onsV=null;
@@ -1414,9 +1493,10 @@ $('aurun').onclick=async()=>{
         const audio=padA(dec[P.enh],P.pad),pc=Object.assign({},cfg,{chunk:P.chunk});
         auBase=pre+'Cargando el modelo…';$('aust').textContent=auBase;
         try{
-          const chunks=await (mock?window.__asrMock(audio,pc,auMsg):auCall(w,{cmd:'run',id:k,audio,model:cfg.model,device:cfg.device,lang:cfg.lang,dtype:cfg.dtype||null,chunk:P.chunk,seg:cfg.seg}));
+          const maxT=audio.length/16000;let chunks=await (mock?window.__asrMock(audio,pc,auMsg):auCall(w,{cmd:'run',id:k,audio,model:cfg.model,device:cfg.device,lang:cfg.lang,dtype:cfg.dtype||null,chunk:P.chunk,seg:cfg.seg}));
           if(auCancel)return;
-          AUR.passInfo.push({k:k+1,chunk:P.chunk,pad:P.pad,enh:P.enh,n:chunks.length});AUR.stages.push(['pasada '+(k+1),Date.now()]);
+          const cc=cleanChunks(chunks,maxT);chunks=cc.chunks;
+          AUR.passInfo.push({k:k+1,chunk:P.chunk,pad:P.pad,enh:P.enh,n:chunks.length,dropped:cc.dropped});AUR.stages.push(['pasada '+(k+1),Date.now()]);
           runs.push(chunks.map(c=>({t:c.t,s:Math.max(0,c.s-P.pad),e:c.e==null?null:c.e-P.pad})).filter(c=>c.s>=0&&(c.e==null||c.e>0)));
         }catch(e){
           if(auCancel||e.message==='cancelado')return;
@@ -1433,7 +1513,8 @@ $('aurun').onclick=async()=>{
     H.push(before);if(H.length>150)H.shift();R.length=0;updH();
     const onA=onsV||onsets;
     if($('aus2').checked&&onA.length){
-      r.touched.forEach(x=>{x.s=snapIn(onA,x.s,.08)});
+      const tsn=new Set(r.touched),fl0=[];L.forEach(ln=>{if(!ln.bg)ln.w.forEach(x=>fl0.push(x))});
+      fl0.forEach((x,i)=>{if(tsn.has(x))snapGuard(fl0,i,onA)});
       L.forEach(ln=>{let pv=-1;ln.w.forEach(x=>{if(x.s!=null){if(x.s<pv)x.s=r3(pv+.01);pv=x.s}})});
     }
     let paus=0;
@@ -1446,6 +1527,8 @@ $('aurun').onclick=async()=>{
         if(q!=null&&n-q>=.2&&(x.e==null||q<x.e-.05)){x.e=r3(q);paus++}
       });
     }
+    {const tt=new Set(r.touched),fl1=[];L.forEach(ln=>{if(!ln.bg)ln.w.forEach(x=>fl1.push(x))});
+     fl1.forEach((x,i)=>{const nx=fl1[i+1];if(tt.has(x)&&x.e!=null&&x.s!=null&&nx&&nx.s!=null&&x.e>nx.s)x.e=r3(Math.max(x.s+.03,nx.s))})}
     r.estWords.forEach(x=>aiSet.add(x));r.nearWords.forEach(x=>aiSet2.add(x));r.dudWords.forEach(x=>aiSet3.add(x));
     AUR.preCheck=check(L).filter(x=>!x.soft).map(x=>x.m+' (línea '+(x.l+1)+(x.w!=null?', palabra '+(x.w+1):'')+')');
     let repNote='';
@@ -1479,6 +1562,7 @@ function auFinish(){
   AUR.end=Date.now();AUR.status=$('aust').textContent;
   try{AUR.finalCheck=check(L).map(x=>x.m+' (línea '+(x.l+1)+(x.w!=null?', palabra '+(x.w+1):'')+')')}catch(e){AUR.finalCheck=[]}
   $('aurepdl').hidden=false;
+  const cur=AUR;(async()=>{try{const e=await navigator.storage.estimate();cur.store={usage:e.usage,quota:e.quota,persisted:navigator.storage.persisted?await navigator.storage.persisted():null}}catch(x){}})();
 }
 function aurText(){
   const A=AUR;if(!A)return'';
@@ -1494,11 +1578,21 @@ function aurText(){
   P('Modo preciso: '+(A.precise?'sí':'no')+' · separar voz: '+(A.opts.separar?'sí':'no')+' · repasar avisos: '+(A.opts.repaso?'sí':'no'));
   P('No tocar lo que ya tenía tiempo: '+(A.opts.keep?'sí':'no')+' · ajustar a golpes de voz: '+(A.opts.snap?'sí':'no')+' · dejar pausas: '+(A.opts.pausas?'sí':'no'));
   P('Avanzadas: realzar voz '+(A.opts.realce?'sí':'no')+' · ventanas de 15 s '+(A.opts.corta?'sí':'no')+' · tiempos por frase '+(A.opts.porFrase?'sí':'no'));
+  H('MODELO Y ALMACENAMIENTO');
+  P('Dirección de la app: '+location.protocol+'//'+(location.host||'(archivo local)')+location.pathname.replace(/[^/]*$/,''));
+  if(A.cache){
+    const c=A.cache.st||{hit:[],put:[],fail:[]};
+    P('Guardado del modelo: '+A.cache.mode);
+    P('Leídos de la copia guardada: '+(c.hit.length?c.hit.join(', '):'ninguno (se descargó todo)'));
+    P('Descargados y guardados ahora: '+(c.put.length?c.put.join(', '):'ninguno'));
+    if(c.fail.length){P('PROBLEMAS AL GUARDAR O LEER LA COPIA:');c.fail.forEach(m=>P('  · '+m))}
+  }else P('Sin información del modelo (no se cargó en esta sincronización).');
+  if(A.store)P('Almacenamiento del navegador: usado '+(A.store.usage/1048576).toFixed(0)+' MB de '+(A.store.quota/1048576).toFixed(0)+' MB · persistente: '+(A.store.persisted==null?'no se sabe':A.store.persisted?'sí':'no (el navegador podría borrarlo si le falta espacio)'));
   H('TIEMPOS POR ETAPA');
   let prev=A.t0;A.stages.forEach(([n,t])=>{P(n+': '+((t-prev)/1000).toFixed(1)+' s');prev=t});
   if(A.opts.separar){H('SEPARACIÓN DE VOZ');P(A.sepNote||'no se completó');if(A.sepInfo){P('motor usado: '+(A.sepInfo.dev||'ninguno'));(A.sepInfo.tries||[]).forEach(t=>P('intento fallido: '+t))}}
   H('PASADAS DE WHISPER');
-  A.passInfo.forEach(p=>P('pasada '+p.k+(p.err?': FALLÓ · '+p.err:': ventana '+p.chunk+' s · margen '+p.pad+' s · realce '+(p.enh?'sí':'no')+' · '+p.n+' palabras oídas')));
+  A.passInfo.forEach(p=>P('pasada '+p.k+(p.err?': FALLÓ · '+p.err:': ventana '+p.chunk+' s · margen '+p.pad+' s · realce '+(p.enh?'sí':'no')+' · '+p.n+' palabras oídas'+(p.dropped?' · '+p.dropped+' palabras DESCARTADAS por tener tiempos inválidos (varias con el mismo segundo o fuera del audio)':''))));
   const r=A.r;
   if(r){
     H('CIFRAS');
@@ -1510,7 +1604,7 @@ function aurText(){
   P('Al final: '+(A.finalCheck?A.finalCheck.length:'—'));(A.finalCheck||[]).forEach(m=>P('  · '+m));
   if(A.rep){
     H('REPASO DE AVISOS');P(A.rep.txt.replace(/^ · /,''));
-    A.rep.log.forEach((e,i)=>{P('tramo '+(i+1)+(e.lo!=null?' ['+f2(e.lo)+' – '+f2(e.hi)+' s]':'')+(e.enh?' (voz realzada)':'')+': '+e.res);P('   palabras: '+e.words.join(' '));if(e.heard)P('   lo que oyó: '+e.heard.join(' '))});
+    A.rep.log.forEach((e,i)=>{P('tramo '+(i+1)+(e.lo!=null?' ['+f2(e.lo)+' – '+f2(e.hi)+' s]':'')+(e.enh?' (voz realzada)':'')+': '+e.res+(e.nota?'  ['+e.nota+']':''));P('   palabras: '+e.words.join(' '));if(e.heard)P('   lo que oyó: '+e.heard.join(' '))});
   }
   if(r){
     H('PALABRA POR PALABRA  (línea.palabra | letra | inicio | fin | origen | oyó | pasadas | marcas)');
