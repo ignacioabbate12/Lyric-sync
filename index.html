@@ -254,6 +254,7 @@ dialog p{margin:6px 0;color:var(--mu)}
     <label class="mu"><input id="aus3" type="checkbox" checked> Dejar pausas donde el audio se calla</label>
     <label class="mu" title="Aísla la voz con un modelo de separación (MDX-Net Kim Vocal 2) y analiza solo la voz, sin batería ni guitarras. Descarga unos 33 MB la primera vez."><input id="ausep" type="checkbox"> <b>Separar la voz de los instrumentos</b> antes de analizar (con placa de video tarda poco; sin ella puede tardar muchos minutos)</label>
     <label class="mu" title="Escucha la canción 3 veces con ajustes distintos y combina los resultados: rescata palabras que una pasada no oyó y marca las dudosas"><input id="aupr" type="checkbox"> <b>Modo preciso</b> (3 pasadas combinadas, tarda unas 3 veces más)</label>
+    <label class="mu" title="Cuando termina el emparejamiento, mira los avisos de problemas del programa (palabras estimadas, dudosas, que se pisan, duraciones raras) y vuelve a escuchar solo esos tramos, uno por uno, para corregirlos. Solo acepta un cambio si no empeora los avisos."><input id="aurep" type="checkbox"> <b>Repasar los avisos de error</b> al terminar (vuelve a escuchar solo los tramos con problemas)</label>
   </div>
   <details><summary class="mu">Opciones avanzadas (con el modo preciso no se usan: cada pasada trae las suyas)</summary>
     <div class="row">
@@ -433,7 +434,7 @@ function alignWords(lw,aw){
   const anchors=[];match.forEach((q,k)=>{if(q>=0)anchors.push([k,q])});
   if(!anchors.length)return{res:null,matched:0,total:n};
   const res=new Array(n).fill(null),AVG=.4,MAXP=.8;
-  anchors.forEach(([k,q])=>{const w=aw[q];res[k]={s:w.s,e:w.e>w.s?w.e:w.s+.25,src:'asr'}});
+  anchors.forEach(([k,q])=>{const w=aw[q];res[k]={s:w.s,e:w.e>w.s?w.e:w.s+.25,src:'asr',ex:w.n===lw[k]}});
   const wt=k=>Math.max(2,lw[k].length);
   /* esqueleto: los k lyrics del hueco se reparten sobre el tiempo hablado de las palabras que el modelo sí escuchó ahí */
   const skel=(ids,ws)=>{
@@ -487,7 +488,7 @@ function mergeFulls(fulls){
     const c=runs.map(r=>r[i]),A=c.filter(x=>x.src==='asr'),N=c.filter(x=>x.src==='near'),I=c.filter(x=>x.src==='interp');
     const pool=A.length?A:(N.length?N:I),src=A.length?'asr':(N.length?'near':'interp');
     const starts=[...A,...N].map(x=>x.s),spread=starts.length>1?Math.max(...starts)-Math.min(...starts):0;
-    out.push({s:med(pool.map(x=>x.s)),e:med(pool.map(x=>x.e)),src,n:A.length,spread,dud:src!=='interp'&&spread>.4});
+    out.push({s:med(pool.map(x=>x.s)),e:med(pool.map(x=>x.e)),src,n:A.length,spread,ex:A.some(x=>x.ex),dud:src!=='interp'&&spread>.4});
   }
   return{full:out,runs:runs.length};
 }
@@ -500,7 +501,7 @@ function applyAlign(L,chunks,opt){
   const mg=mergeFulls(runs.map(ch=>alignRun(lw,idx,ch)));
   if(!mg)return null;
   const full=mg.full,multi=mg.runs>1;
-  const est=[],near=[],dud=[],touched=[];let matched=0,kept=0,agreed=0,rescued=0;
+  const est=[],near=[],dud=[],fuzz=[],touched=[];let matched=0,kept=0,agreed=0,rescued=0;
   const dd=[];refs.forEach((r,i)=>{const f=full[i];if(f.src==='asr'&&f.e>f.s)dd.push(f.e-f.s)});dd.sort((a,b)=>a-b);
   const cap=Math.min(4,Math.max(2,(dd.length?dd[dd.length>>1]:.4)*8));
   refs.forEach((r,i)=>{
@@ -510,6 +511,7 @@ function applyAlign(L,chunks,opt){
     if(nf&&f.src!=='interp'&&f.e<nf.s-.12)r.x.e=r3(Math.max(f.e,f.s+.08));
     if(f.src==='asr'){matched++;if(multi){if(f.n>=2)agreed++;else rescued++}}else if(f.src==='near')near.push(r.x);else est.push(r.x);
     if(f.dud)dud.push(r.x);
+    if(f.src==='asr'&&f.ex===false)fuzz.push(r.x);
   });
   const groups=[];refs.forEach((r,i)=>{const g=groups[groups.length-1];if(g&&g.ln===r.ln)g.ids.push(i);else groups.push({ln:r.ln,ids:[i]})});
   groups.forEach((g,gi)=>{
@@ -529,7 +531,7 @@ function applyAlign(L,chunks,opt){
     ln.w[n-1].e=r3(pe);bgN+=n;
   });
   return{matched,near:near.length,total:refs.length,kept,est:est.length,bg:bgN,passes:mg.runs,agreed,rescued,dud:dud.length,
-    estWords:est,nearWords:near,dudWords:dud,touched};
+    estWords:est,nearWords:near,dudWords:dud,fuzzWords:fuzz,touched};
 }
 /* instante donde el audio se calla entre dos palabras (o null si no hay silencio claro); pk = envolvente, pps = puntos por segundo */
 function energyEnd(pk,pps,s,n){
@@ -545,6 +547,90 @@ function energyEnd(pk,pps,s,n){
     if(a/c<thr){run++;if(run>=minQ){const q=(i-run+1)/pps;return q-s>=.12&&n-q>=.2?q+.04:null}}else run=0;
   }
   return null;
+}
+
+/* ===== Repaso de avisos: vuelve a escuchar solo los tramos con problemas ===== */
+async function repairPass(o){
+  const base=o.dec[false]||o.dec[true],dur=base.length/16000;
+  const touched=new Set(o.r.touched),flagged=new Set([...o.r.estWords,...o.r.nearWords,...o.r.dudWords,...(o.r.fuzzWords||[])]);
+  const issues=()=>check(L).filter(x=>!x.soft);
+  const before=issues().length,fixedSet=new Set();
+  let wins=0,skipped=0,reverted=0,n=0;
+  const attempts=o.dec[false]?[false,true]:[true];
+  for(const enh of attempts){
+    const flat=[];L.forEach((ln,li)=>{if(!ln.bg)ln.w.forEach(x=>flat.push({x,ln,li}))});
+    const pos=new Map();flat.forEach((f,i)=>pos.set(f.x,i));
+    const bad=new Set();
+    flagged.forEach(x=>{if(!fixedSet.has(x)&&pos.has(x))bad.add(x)});
+    issues().forEach(is=>{
+      const ln=L[is.l];if(!ln||ln.bg)return;
+      if(is.w==null){ln.w.forEach(x=>bad.add(x));return}
+      if(ln.w[is.w])bad.add(ln.w[is.w]);
+      if(/línea anterior/.test(is.m)){for(let q=is.l-1;q>=0;q--)if(!L[q].bg){const pw=L[q].w;if(pw.length)bad.add(pw[pw.length-1]);break}}
+    });
+    if(o.keep)[...bad].forEach(x=>{if(!touched.has(x))bad.delete(x)});
+    const bi=[];flat.forEach((f,i)=>{if(bad.has(f.x))bi.push(i)});
+    if(!bi.length)break;
+    const cl=[];bi.forEach(i=>{const c=cl[cl.length-1];if(c&&i-c.b<=4)c.b=i;else cl.push({a:i,b:i})});
+    let done=0;
+    for(const c of cl){
+      if(auCancel)throw new Error('cancelado');
+      const i0=Math.max(0,c.a-2),i1=Math.min(flat.length-1,c.b+2);
+      let t0=null;for(let i=i0;i<=i1&&t0==null;i++)if(flat[i].x.s!=null)t0=flat[i].x.s;
+      const lx=flat[i1].x,nx=flat[i1+1]&&flat[i1+1].x.s;
+      if(t0==null){skipped++;continue}
+      const t1=lx.e!=null?lx.e:(nx!=null?nx:(lx.s!=null?lx.s+.6:t0+1));
+      const lo=Math.max(0,t0-.8);let hi=Math.min(dur,t1+.8);if(hi-lo<2)hi=Math.min(dur,lo+2);
+      if(hi-lo>28||hi<=lo||done>=40){skipped++;continue}
+      done++;n++;
+      auPass='';auBase='Repasando los avisos… tramo '+done+' de '+Math.min(cl.length,40)+(enh?' (con la voz realzada)':'');$('aust').textContent=auBase;
+      $('aubi').classList.remove('ind');$('aubi').style.width=(done/Math.min(cl.length,40)*100).toFixed(1)+'%';
+      const a0=Math.floor(lo*16000),a1=Math.min(base.length,Math.ceil(hi*16000));
+      let audio;
+      if(enh){audio=o.dec[true]?o.dec[true].slice(a0,a1):await filter16k(o.dec[false].slice(a0,a1))}
+      else audio=(o.dec[false]||o.dec[true]).slice(a0,a1);
+      let chunks;
+      try{
+        const pc=Object.assign({},o.cfg,{chunk:30,__off:lo});
+        chunks=await (o.mock?window.__asrMock(audio,pc,auMsg):auCall(o.w,{cmd:'run',id:1000+n,audio,model:o.cfg.model,device:o.cfg.device,lang:o.cfg.lang,dtype:o.cfg.dtype||null,chunk:30,seg:o.cfg.seg}));
+      }catch(e){if(auCancel||e.message==='cancelado')throw e;skipped++;continue}
+      if(auCancel)throw new Error('cancelado');
+      const lw=[],idx=[];for(let i=i0;i<=i1;i++){const w=normW(flat[i].x.t);lw.push(w);if(w.length)idx.push(lw.length-1)}
+      const al=alignRun(lw,idx,chunks.map(k=>({t:k.t,s:k.s+lo,e:k.e==null?null:k.e+lo})));
+      if(!al)continue;
+      const l0=Math.max(0,flat[i0].li-1),l1=Math.min(L.length-1,flat[i1].li+1);
+      const snap=[];for(let li=l0;li<=l1;li++)L[li].w.forEach(x=>snap.push([x,x.s,x.e]));
+      const cb=issues().length,changed=[];
+      for(let i=i0;i<=i1;i++){
+        const f=flat[i],a=al[i-i0];
+        if(!bad.has(f.x)||!a||a.src!=='asr'||a.ex===false)continue;
+        const s=r3(a.s),pv=i>0?flat[i-1].x.s:null,nv=i+1<flat.length?flat[i+1].x.s:null;
+        if(s<lo+.05||s>hi-.05)continue;
+        if(pv!=null&&s<=pv+.005)continue;
+        if(nv!=null&&s>=nv-.005)continue;
+        f.x.s=s;f.x.e=null;changed.push(i);
+      }
+      if(!changed.length)continue;
+      changed.forEach(i=>{
+        const f=flat[i],a=al[i-i0],nf=flat[i+1],same=nf&&nf.ln===f.ln;
+        if(same){const na=al[i+1-i0];if(a.e<(nf.x.s!=null?nf.x.s:(na?na.s:1e9))-.12)f.x.e=r3(Math.max(a.e,f.x.s+.08))}
+        else{let e=Math.min(a.e,f.x.s+3);if(nf&&nf.x.s!=null)e=Math.min(e,nf.x.s);f.x.e=r3(Math.max(e,f.x.s+.12))}
+      });
+      if(o.snap)changed.forEach(i=>{flat[i].x.s=snapIn(o.onA,flat[i].x.s,.08)});
+      for(let li=l0;li<=l1;li++){let pv=-1;L[li].w.forEach(x=>{if(x.s!=null){if(x.s<pv)x.s=r3(pv+.01);pv=x.s}})}
+      if(o.paus)changed.forEach(i=>{
+        const x=flat[i].x,nf=flat[i+1],nn=nf&&nf.x.s!=null?nf.x.s:(x.e!=null?x.e:x.s+.6),q=energyEnd(o.pkE,PPS,x.s,nn);
+        if(q!=null&&nn-q>=.2&&(x.e==null||q<x.e-.05))x.e=r3(q);
+      });
+      if(issues().length>cb){snap.forEach(([x,s,e])=>{x.s=s;x.e=e});reverted++;continue}
+      wins++;changed.forEach(i=>{const x=flat[i].x;fixedSet.add(x);aiSet.delete(x);aiSet2.delete(x);aiSet3.delete(x)});
+    }
+  }
+  const after=issues().length,conf=[...fixedSet].length;
+  let txt;
+  if(!n)txt=' · repaso de avisos: no había tramos con problemas que volver a escuchar';
+  else txt=' · repaso de avisos: se volvió a escuchar '+n+' tramo'+(n>1?'s':'')+', '+conf+' palabra'+(conf===1?'':'s')+' confirmada'+(conf===1?'':'s')+' o corregida'+(conf===1?'':'s')+', avisos del programa '+before+' → '+after+(reverted?' ('+reverted+' cambio'+(reverted>1?'s':'')+' descartado'+(reverted>1?'s':'')+' por empeorar los avisos)':'')+(skipped?' · '+skipped+' tramo'+(skipped>1?'s':'')+' no se pudo'+(skipped>1?'ieron':'')+' repasar':'');
+  return{txt,before,after,fixed:conf,wins,reverted,skipped,n};
 }
 
 /* ===== Separación de voz (MDX-Net «Kim Vocal 2»): matemática ===== */
@@ -720,7 +806,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.4',PK='lyricsync_projects';
+const APP_VERSION='3.5',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1310,7 +1396,7 @@ $('aurun').onclick=async()=>{
           failed++;
         }
       }
-    }finally{auClose()}
+    }finally{if(!$('aurep').checked)auClose()}
     if(auCancel)return;
     const before=snapS(),r=applyAlign(L,runs.length>1?runs:runs[0],{keep:$('auk').checked});
     if(!r){auUI(false,'El modelo no reconoció nada que coincida con tu letra. Probá con el modelo Turbo (si tu navegador tiene WebGPU), revisá el idioma o usá las opciones avanzadas.');return}
@@ -1331,6 +1417,14 @@ $('aurun').onclick=async()=>{
       });
     }
     r.estWords.forEach(x=>aiSet.add(x));r.nearWords.forEach(x=>aiSet2.add(x));r.dudWords.forEach(x=>aiSet3.add(x));
+    let repNote='';
+    if($('aurep').checked){
+      try{
+        const rp=await repairPass({w,mock,cfg,dec,r,keep:$('auk').checked,snap:$('aus2').checked&&onA.length>0,onA,paus:$('aus3').checked&&!!pkE,pkE});
+        if(auCancel)return;
+        repNote=rp.txt;
+      }catch(e){if(auCancel||e.message==='cancelado')return;repNote=' · el repaso de avisos falló ('+e.message+'), quedó el resultado del emparejamiento'}
+    }
     P=firstOpen();render();save();
     let msg;
     if(r.passes>1){
@@ -1338,13 +1432,13 @@ $('aurun').onclick=async()=>{
     }else{
       msg='Listo: '+r.matched+' de '+r.total+' palabras reconocidas exactas · '+r.near+' ubicadas por posición (borde punteado) · '+r.est+' estimadas (borde amarillo discontinuo)';
     }
-    msg+=sepNote+(r.kept?' · '+r.kept+' ya marcadas se respetaron':'')+(paus?' · '+paus+' pausas dejadas donde el audio se calla':'')+'. Revisá en la onda; Ctrl+Z lo deshace todo.';
+    msg+=sepNote+repNote+(r.kept?' · '+r.kept+' ya marcadas se respetaron':'')+(paus?' · '+paus+' pausas dejadas donde el audio se calla':'')+'. Revisá en la onda; Ctrl+Z lo deshace todo.';
     if(r.total&&r.matched/r.total<.5)msg+=' El reconocimiento fue flojo: probá el modelo Turbo (con WebGPU) o el modo preciso.';
     auUI(false,msg);
   }catch(e){
     if(auCancel||e.message==='cancelado')return;
     auUI(false,'No se pudo sincronizar: '+e.message);
-  }
+  }finally{auClose()}
 };
 hasGPU().then(g=>{if(g){$('aum').value=TURBO;$('aud').value='webgpu'}else{$('aum').value='onnx-community/whisper-small_timestamped';$('aud').value='wasm'}});
 
