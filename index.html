@@ -884,7 +884,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.12',PK='lyricsync_projects';
+const APP_VERSION='3.13',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1348,8 +1348,13 @@ function pickWord(l,w){
   selOne=true;P={l,w};render();
   note('Palabra «'+L[l].w[w].t+'» elegida: apretá espacio en el momento justo.');
 }
+function resetVoicePlayer(){
+  const sa=$('ausa');if(sa){try{sa.pause()}catch(e){}if(sa.src)URL.revokeObjectURL(sa.src);sa.removeAttribute('src');try{sa.load()}catch(e){}sa.hidden=true}
+  instMem=null;vocalsMem=null;
+}
 function unloadAudio(){
   try{a.pause()}catch(e){}
+  resetVoicePlayer();
   if(karURL){URL.revokeObjectURL(karURL);karURL=null}karOn=false;instMem=null;{const kb=$('aukar');if(kb)kb.textContent='Karaoke (solo la música)'}
   a.removeAttribute('src');try{a.load()}catch(e){}
   if(audioURL){URL.revokeObjectURL(audioURL);audioURL=null}
@@ -1737,11 +1742,11 @@ self.onmessage=async e=>{
     const run=async inp=>{const r=await sess.run({[inName]:new ort.Tensor('float32',inp,[1,4,3072,256])});const o=r[outName];return o.data instanceof Float32Array?o.data:await o.getData()};
     const lr=await mdxDemix([m.l,m.r],run,{},(d,t)=>post({type:'prog',done:d,total:t}));
     const mono=new Float32Array(lr[0].length);for(let i=0;i<mono.length;i++)mono[i]=(lr[0][i]+lr[1][i])*.5;
-    let iL=null,iR=null;
-    try{const n=Math.min(lr[0].length,m.l.length,m.r.length);if(n<=44100*600){iL=new Int16Array(n);iR=new Int16Array(n);
-      for(let i=0;i<n;i++){const a=m.l[i]-lr[0][i],b=m.r[i]-lr[1][i];iL[i]=Math.max(-1,Math.min(1,a))*32767;iR[i]=Math.max(-1,Math.min(1,b))*32767}}}catch(err){iL=iR=null}
+    let iL=null,iR=null,vL=null,vR=null;
+    try{const n=Math.min(lr[0].length,m.l.length,m.r.length);if(n<=44100*600){iL=new Int16Array(n);iR=new Int16Array(n);vL=new Int16Array(n);vR=new Int16Array(n);
+      for(let i=0;i<n;i++){const a=m.l[i]-lr[0][i],b=m.r[i]-lr[1][i];iL[i]=Math.max(-1,Math.min(1,a))*32767;iR[i]=Math.max(-1,Math.min(1,b))*32767;vL[i]=Math.max(-1,Math.min(1,lr[0][i]))*32767;vR[i]=Math.max(-1,Math.min(1,lr[1][i]))*32767}}}catch(err){iL=iR=vL=vR=null}
     try{await sess.release()}catch(err){}
-    self.postMessage({type:'done',mono,iL,iR},iL?[mono.buffer,iL.buffer,iR.buffer]:[mono.buffer]);
+    self.postMessage({type:'done',mono,iL,iR,vL,vR},iL?[mono.buffer,iL.buffer,iR.buffer,vL.buffer,vR.buffer]:[mono.buffer]);
   }catch(err){post({type:'error',msg:String((err&&err.message)||err)})}
 };`;
 async function decode44k(blob){
@@ -1775,7 +1780,7 @@ async function sepWorkerRun(model,device,l,r){
     auSep=w;
     w.onmessage=ev=>{
       const m=ev.data;
-      if(m.type==='done'){w.terminate();auSep=null;lastInst=m.iL&&m.iR?{l:m.iL,r:m.iR}:null;res(m.mono)}
+      if(m.type==='done'){w.terminate();auSep=null;lastInst=m.iL&&m.iR?{l:m.iL,r:m.iR,vl:m.vL||null,vr:m.vR||null}:null;res(m.mono)}
       else if(m.type==='error'){w.terminate();auSep=null;rej(new Error(m.net?'no se pudo descargar la librería de separación (revisá tu conexión a internet): '+m.msg:m.msg))}
       else if(m.type==='status'){auBase=m.msg;$('aust').textContent=auBase}
       else if(m.type==='prog'){
@@ -1814,22 +1819,23 @@ async function getVocals(){
   if(vocalsMem&&vocalsMem.id===id&&vocalsMem.sig===sig)return{data:vocalsMem.data,cached:true};
   try{const c=await adbGet('vocals:'+id);if(c&&c.sig===sig&&c.data){vocalsMem={id,sig,data:c.data};return{data:c.data,cached:true}}}catch(e){}
   lastInst=null;const data=await sepRun();
-  if(lastInst){instMem={id,sig,l:lastInst.l,r:lastInst.r};try{await adbSet('inst:'+id,{sig,l:lastInst.l,r:lastInst.r})}catch(e){}}
+  if(lastInst){instMem={id,sig,l:lastInst.l,r:lastInst.r,vl:lastInst.vl,vr:lastInst.vr};try{await adbSet('inst:'+id,{sig,l:lastInst.l,r:lastInst.r,vl:lastInst.vl,vr:lastInst.vr})}catch(e){}}
   vocalsMem={id,sig,data};try{await adbSet('vocals:'+id,{sig,data})}catch(e){note('Ojo: no pude guardar la voz separada en el navegador; se va a perder al cerrar la app.')}
   return{data,cached:false};
 }
-async function getInst(){
+async function getInst(needVoc){
   const id=PR.cur,sig=(audioName||'')+'|'+audioBlob.size+'|kimv2';
-  if(instMem&&instMem.id===id&&instMem.sig===sig)return instMem;
-  try{const c=await adbGet('inst:'+id);if(c&&c.sig===sig&&c.l){instMem={id,sig,l:c.l,r:c.r};return instMem}}catch(e){}
+  if(instMem&&instMem.id===id&&instMem.sig===sig&&(!needVoc||instMem.vl))return instMem;
+  try{const c=await adbGet('inst:'+id);if(c&&c.sig===sig&&c.l&&(!needVoc||c.vl)){instMem={id,sig,l:c.l,r:c.r,vl:c.vl||null,vr:c.vr||null};return instMem}}catch(e){}
   vocalsMem=null;try{await adbDel('vocals:'+id)}catch(e){}
   await getVocals();
   return instMem&&instMem.id===id?instMem:null;
 }
-function wavSt(l,r,sr){
+function wavSt(l,r,sr,norm){
   const n=l.length,b=new ArrayBuffer(44+n*4),v=new DataView(b),W=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
   W(0,'RIFF');v.setUint32(4,36+n*4,true);W(8,'WAVE');W(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,2,true);v.setUint32(24,sr,true);v.setUint32(28,sr*4,true);v.setUint16(32,4,true);v.setUint16(34,16,true);W(36,'data');v.setUint32(40,n*4,true);
-  for(let i=0;i<n;i++){v.setInt16(44+i*4,l[i],true);v.setInt16(46+i*4,r[i],true)}
+  let g=1;if(norm){let mx=0;for(let i=0;i<n;i++){const q=Math.max(Math.abs(l[i]),Math.abs(r[i]));if(q>mx)mx=q}g=mx>0?Math.min(8,.9*32767/mx):1}
+  for(let i=0;i<n;i++){v.setInt16(44+i*4,Math.max(-32768,Math.min(32767,Math.round(l[i]*g))),true);v.setInt16(46+i*4,Math.max(-32768,Math.min(32767,Math.round(r[i]*g))),true)}
   return new Blob([b],{type:'audio/wav'});
 }
 let karURL=null,karOn=false;
@@ -1867,19 +1873,28 @@ function wav16(a,sr){
 }
 $('ausep').addEventListener('change',()=>{const p=PR.list[PR.cur];$('ausl').hidden=$('aukar').hidden=!((p&&p.vsv)||$('ausep').checked)});
 $('ausl').onclick=async()=>{
-  const id=PR.cur;if(!id)return;let d=vocalsMem&&vocalsMem.id===id?vocalsMem.data:null;
-  if(!d){try{const c=await adbGet('vocals:'+id);d=c&&c.data}catch(e){}}
-  if(!d){
-    if(!audioBlob){note('Este proyecto no tiene audio cargado.');return}
-    if(auBusy)return;
-    auCancel=false;auPass='';auBase='Separando la voz…';auT0=Date.now();auUI(true,auBase);$('aubi').style.width='0';
-    try{const v=await getVocals();d=v.data}
+  const id=PR.cur;if(!id)return;
+  if(!audioBlob){note('Este proyecto no tiene audio cargado.');return}
+  if(auBusy)return;
+  const sig=(audioName||'')+'|'+audioBlob.size+'|kimv2';
+  let blob=null,inst=instMem&&instMem.id===id&&instMem.sig===sig&&instMem.vl?instMem:null;
+  if(!inst){try{const c=await adbGet('inst:'+id);if(c&&c.sig===sig&&c.vl){inst=instMem={id,sig,l:c.l,r:c.r,vl:c.vl,vr:c.vr}}}catch(e){}}
+  if(!inst){
+    auCancel=false;auPass='';auBase='Separando la voz en calidad completa (puede tardar unos minutos)…';auT0=Date.now();auUI(true,auBase);$('aubi').style.width='0';
+    try{inst=await getInst(true)}
     catch(e){if(!auCancel&&e.message!=='cancelado')auUI(false,'No se pudo separar la voz: '+e.message);return}
     if(auCancel)return;
     auUI(false,'Voz separada lista.');
-    if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR()}
+    if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR();$('ausl').hidden=$('aukar').hidden=false}
   }
-  const au=$('ausa');if(au.src)URL.revokeObjectURL(au.src);au.src=URL.createObjectURL(wav16(d,16000));au.hidden=false;au.play().catch(()=>{});
+  if(inst&&inst.vl)blob=wavSt(inst.vl,inst.vr,44100,true);
+  else{
+    let d=vocalsMem&&vocalsMem.id===id?vocalsMem.data:null;
+    if(!d){try{const c=await adbGet('vocals:'+id);d=c&&c.data}catch(e){}}
+    if(!d){note('No hay voz separada para este proyecto.');return}
+    blob=wav16(d,16000);note('Canción muy larga: se oye en calidad reducida.');
+  }
+  const au=$('ausa');if(au.src)URL.revokeObjectURL(au.src);au.src=URL.createObjectURL(blob);au.hidden=false;au.play().catch(()=>{});
 };
 
 /* ===== Audio guardado por proyecto (IndexedDB) ===== */
@@ -1896,6 +1911,7 @@ async function adbTx(mode,fn){
 }
 const adbGet=id=>adbTx('readonly',s=>s.get(id)),adbSet=(id,rec)=>adbTx('readwrite',s=>s.put(rec,id)),adbDel=id=>adbTx('readwrite',s=>s.delete(id));
 function setAudio(blob,name){
+  resetVoicePlayer();
   if(karURL){URL.revokeObjectURL(karURL);karURL=null}karOn=false;{const kb=$('aukar');if(kb)kb.textContent='Karaoke (solo la música)'}
   if(audioURL)URL.revokeObjectURL(audioURL);
   audioURL=URL.createObjectURL(blob);a.src=audioURL;audioName=name;audioBlob=blob;buildPeaks(blob);
