@@ -263,7 +263,7 @@ dialog p{margin:6px 0;color:var(--mu)}
       <label class="mu"><input id="auseg" type="checkbox"> Usar tiempos por frase (más estables que por palabra)</label>
     </div>
   </details>
-  <div class="row"><button id="aurun" class="pri">Sincronizar automáticamente</button><button id="aucan" hidden>Cancelar</button><button id="aurepdl" hidden title="Baja un archivo de texto con todo lo que hizo la sincronización: ajustes, qué oyó el modelo, qué palabras quedaron dudosas y los avisos. Sirve para pasarlo y revisar los errores.">Descargar resumen</button><button id="ausl" hidden title="Reproduce la voz aislada para comprobar qué tan bien quedó">Oír la voz separada</button><span id="aust" class="mu"></span></div>
+  <div class="row"><button id="aurun" class="pri">Sincronizar automáticamente</button><button id="aucan" hidden>Cancelar</button><button id="aurepdl" hidden title="Baja un archivo de texto con todo lo que hizo la sincronización: ajustes, qué oyó el modelo, qué palabras quedaron dudosas y los avisos. Sirve para pasarlo y revisar los errores.">Descargar resumen</button><button id="ausl" hidden title="Reproduce la voz aislada para comprobar qué tan bien quedó">Oír la voz separada</button><button id="aukar" hidden title="Cambia el reproductor principal (y la vista previa) a la música sola, sin la voz, para cantar encima">Karaoke (solo la música)</button><span id="aust" class="mu"></span></div>
   <div id="aubar" hidden><i id="aubi"></i></div>
   <audio id="ausa" controls hidden style="width:100%;margin-top:10px"></audio>
 </details>
@@ -830,16 +830,19 @@ function lineGap(pk,pps,a,b,cap){
   for(let i=lo;i<=hi;i++){let t=0,c=0;for(let k=Math.max(lo,i-w);k<=Math.min(hi,i+w);k++){t+=pk[k];c++}sm[i-lo]=t/c}
   const srt=Array.from(sm).sort((x,y)=>x-y),ref=srt[Math.floor(srt.length*.9)],fl=srt[Math.floor(srt.length*.02)];
   if(ref-fl<.03)return{ok:false,why:'la voz casi no suena en esa zona'};
-  const thr=fl+.15*(ref-fl),minLen=Math.round(.10*pps);
+  const thr=fl+.20*(ref-fl),minLen=Math.round(.08*pps);
   const iA=Math.floor((a+.2)*pps),iB=Math.min(hi,Math.floor(Math.min(b+1.0,cap-.05)*pps));
   if(iB-iA<minLen+2)return{ok:false,why:'tramo demasiado corto para buscar'};
-  let best=null,run=0,mn=1e9;
-  for(let i=iA;i<=iB;i++){
-    const v=sm[i-lo];if(v<mn)mn=v;
-    if(v<thr)run++;
-    else{if(run>=minLen){const g={s:(i-run)/pps,e:i/pps};if(g.e>=b-.15&&(!best||g.e-g.s>best.e-best.s))best=g}run=0}
+  const gs=[];let run=0;
+  for(let i=iA;i<=iB+1;i++){
+    const q=i<=iB?sm[i-lo]:1e9;
+    if(q<thr)run++;
+    else{if(run>=minLen)gs.push({s:(i-run)/pps,e:i/pps});run=0}
   }
-  if(!best)return{ok:false,why:'sin silencio de 0,10 s o más (el mínimo llega al '+Math.round((ref>0?mn/ref:0)*100)+'% del nivel de la voz)'};
+  if(!gs.length)return{ok:false,why:'no hay un silencio de 0,08 s o más entre las dos frases'};
+  const pick=(f)=>gs.filter(f).sort((x,y)=>(y.e-y.s)-(x.e-x.s))[0];
+  const best=pick(g=>g.e>=b-.15)||pick(g=>g.e>=b-.6&&g.e<b-.15);
+  if(!best)return{ok:false,why:'los silencios que hay ('+gs.map(g=>g.s.toFixed(2)+'–'+g.e.toFixed(2)).join(', ')+') quedan lejos del inicio de la siguiente'};
   return{ok:true,e0:best.s+.02,s1:best.e-.03,len:best.e-best.s};
 }
 function envFrom(a,sr,pps){
@@ -881,7 +884,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.10',PK='lyricsync_projects';
+const APP_VERSION='3.12',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -980,7 +983,7 @@ $('sp').onchange=()=>{a.playbackRate=+$('sp').value;$('sp').blur()};
 a.onloadedmetadata=()=>{a.playbackRate=+$('sp').value};
 $('af').onchange=e=>{
   const f=e.target.files[0];if(!f)return;e.target.value='';const id=PR.cur;
-  if(id){adbDel('vocals:'+id).catch(()=>{});vocalsMem=null;if(PR.list[id])PR.list[id].vsv=false;$('ausl').hidden=true}
+  if(id){adbDel('vocals:'+id).catch(()=>{});adbDel('inst:'+id).catch(()=>{});vocalsMem=null;if(PR.list[id])PR.list[id].vsv=false;$('ausl').hidden=true}
   setAudio(f,f.name);
   if(id&&PR.list[id]){PR.list[id].audio=f.name;PR.list[id].asv=false;savePR();storeAudio(id,f)}
   pjUI();
@@ -1126,7 +1129,7 @@ function pjUI(){
   $('pjs').innerHTML=ids.map(id=>'<option value="'+id+'"'+(id===PR.cur?' selected':'')+'>'+X(PR.list[id].name)+'</option>').join('');
   const p=PR.list[PR.cur];
   $('cn').textContent=p?p.name:'Elegir proyecto';
-  if($('ausl'))$('ausl').hidden=!((p&&p.vsv)||$('ausep').checked);
+  if($('ausl'))$('ausl').hidden=$('aukar').hidden=!((p&&p.vsv)||$('ausep').checked);
   $('pjinfo').textContent=(p&&p.audio?(p.asv?'Audio guardado con este proyecto: '+p.audio+(p.asz?' ('+(p.asz/1048576).toFixed(1)+' MB)':'')+'. Se carga solo al abrirlo.':'Este proyecto usaba «'+p.audio+'», pero no quedó guardado: volvé a cargarlo con «Cargar audio».'):'Este proyecto todavía no tiene audio: cargalo con «Cargar audio» y queda guardado con el proyecto.')+' Último respaldo: '+(getMeta().last?new Date(getMeta().last).toLocaleDateString('es'):'nunca')+'.';
 }
 function openProj(id,noSave){
@@ -1146,7 +1149,7 @@ $('pjdup').onclick=async()=>{
 $('pjren').onclick=()=>{const p=PR.list[PR.cur],n=prompt('Nuevo nombre',p.name);if(n&&n.trim()){p.name=n.trim();savePR();pjUI()}};
 $('pjdel').onclick=()=>{
   const p=PR.list[PR.cur];if(!confirm('¿Borrar el proyecto «'+p.name+'»? No se puede deshacer.'))return;
-  adbDel(PR.cur).catch(()=>{});adbDel('vocals:'+PR.cur).catch(()=>{});delete PR.list[PR.cur];PR.cur=null;const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
+  adbDel(PR.cur).catch(()=>{});adbDel('vocals:'+PR.cur).catch(()=>{});adbDel('inst:'+PR.cur).catch(()=>{});delete PR.list[PR.cur];PR.cur=null;const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
   openProj(ids.length?ids[0]:newProj('Proyecto 1'),true);
 };
 
@@ -1205,6 +1208,17 @@ function refineLineGaps(L,pk,tset,keep){
     if(ns>=cap-.05||ns<ne){rec.why='silencio hallado pero incoherente con las palabras vecinas';continue}
     last.e=ne;first.s=ns;if(first.e!=null&&first.e<=ns+.03)first.e=null;
     rec.ok=true;rec.fin=ne;rec.ini=ns;n++;
+  }
+  return n;
+}
+/* palabras estimadas o ubicadas por posición que quedaron a menos de 30 ms de la siguiente: se echan hacia atrás */
+function fixTiny(L,soft){
+  const ws=[];L.forEach(l=>{if(!l.bg)l.w.forEach(x=>ws.push(x))});let n=0;
+  for(let i=1;i+1<ws.length;i++){
+    const x=ws[i],nx=ws[i+1];
+    if(x.s==null||nx.s==null||!soft.has(x)||nx.s-x.s>=.05)continue;
+    const lo=ws[i-1].s+.03,ns=r3(Math.max(lo,nx.s-.12));
+    if(ns<nx.s-.03){x.s=ns;x.e=null;n++}
   }
   return n;
 }
@@ -1336,6 +1350,7 @@ function pickWord(l,w){
 }
 function unloadAudio(){
   try{a.pause()}catch(e){}
+  if(karURL){URL.revokeObjectURL(karURL);karURL=null}karOn=false;instMem=null;{const kb=$('aukar');if(kb)kb.textContent='Karaoke (solo la música)'}
   a.removeAttribute('src');try{a.load()}catch(e){}
   if(audioURL){URL.revokeObjectURL(audioURL);audioURL=null}
   audioName='';audioBlob=null;peaks=null;onsets=[];wv.msg='';wv.start=0;wv.sel=null;
@@ -1514,7 +1529,7 @@ $('aurun').onclick=async()=>{
       try{
         const v=await getVocals();vocals=v.data;
         sepNote=v.cached?' · voz separada tomada de la copia guardada':' · voz separada de los instrumentos';
-        if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR();$('ausl').hidden=false}
+        if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR();$('ausl').hidden=$('aukar').hidden=false}
         pkV=envFrom(vocals,16000,PPS);onsV=findOnsets(pkV);
       }catch(e){
         if(auCancel||e.message==='cancelado')return;
@@ -1583,9 +1598,10 @@ $('aurun').onclick=async()=>{
         repNote=rp.txt;AUR.rep=rp;AUR.stages.push(['repaso de avisos',Date.now()]);
       }catch(e){if(auCancel||e.message==='cancelado')return;repNote=' · el repaso de avisos falló ('+e.message+'), quedó el resultado del emparejamiento'}
     }
-    let gapN=0;
+    let gapN=0,tinyN=0;
     if($('aus3').checked&&pkV){try{gapN=refineLineGaps(L,pkV,new Set(r.touched),$('auk').checked)}catch(e){}}
     else if(AUR)AUR.gaps=null;
+    try{tinyN=fixTiny(L,new Set([...r.estWords,...r.nearWords]))}catch(e){}
     P=firstOpen();render();save();
     let msg;
     if(r.passes>1){
@@ -1695,7 +1711,7 @@ async function ortLoad(file){
   }
   const er=new Error('no se pudo descargar la librería de separación desde ningún servidor, último intento: '+last+'. Puede estar bloqueada por tu red, antivirus o una extensión (adblock)');er.net=true;throw er;
 }
-let auSep=null,vocalsMem=null,auT0b=0,sepInfo=null,AUR=null;
+let auSep=null,vocalsMem=null,lastInst=null,instMem=null,auT0b=0,sepInfo=null,AUR=null;
 const SEP_WORKER=[mdxPlan,mdxFFT,mdxSTFT,mdxWsum,mdxISTFT,mdxDemix].map(f=>f.toString()).join('\n')+`
 const loadOrt=async m=>{
     const errs=[];
@@ -1721,8 +1737,11 @@ self.onmessage=async e=>{
     const run=async inp=>{const r=await sess.run({[inName]:new ort.Tensor('float32',inp,[1,4,3072,256])});const o=r[outName];return o.data instanceof Float32Array?o.data:await o.getData()};
     const lr=await mdxDemix([m.l,m.r],run,{},(d,t)=>post({type:'prog',done:d,total:t}));
     const mono=new Float32Array(lr[0].length);for(let i=0;i<mono.length;i++)mono[i]=(lr[0][i]+lr[1][i])*.5;
+    let iL=null,iR=null;
+    try{const n=Math.min(lr[0].length,m.l.length,m.r.length);if(n<=44100*600){iL=new Int16Array(n);iR=new Int16Array(n);
+      for(let i=0;i<n;i++){const a=m.l[i]-lr[0][i],b=m.r[i]-lr[1][i];iL[i]=Math.max(-1,Math.min(1,a))*32767;iR[i]=Math.max(-1,Math.min(1,b))*32767}}}catch(err){iL=iR=null}
     try{await sess.release()}catch(err){}
-    self.postMessage({type:'done',mono},[mono.buffer]);
+    self.postMessage({type:'done',mono,iL,iR},iL?[mono.buffer,iL.buffer,iR.buffer]:[mono.buffer]);
   }catch(err){post({type:'error',msg:String((err&&err.message)||err)})}
 };`;
 async function decode44k(blob){
@@ -1756,7 +1775,7 @@ async function sepWorkerRun(model,device,l,r){
     auSep=w;
     w.onmessage=ev=>{
       const m=ev.data;
-      if(m.type==='done'){w.terminate();auSep=null;res(m.mono)}
+      if(m.type==='done'){w.terminate();auSep=null;lastInst=m.iL&&m.iR?{l:m.iL,r:m.iR}:null;res(m.mono)}
       else if(m.type==='error'){w.terminate();auSep=null;rej(new Error(m.net?'no se pudo descargar la librería de separación (revisá tu conexión a internet): '+m.msg:m.msg))}
       else if(m.type==='status'){auBase=m.msg;$('aust').textContent=auBase}
       else if(m.type==='prog'){
@@ -1794,10 +1813,51 @@ async function getVocals(){
   const id=PR.cur,sig=(audioName||'')+'|'+audioBlob.size+'|kimv2';
   if(vocalsMem&&vocalsMem.id===id&&vocalsMem.sig===sig)return{data:vocalsMem.data,cached:true};
   try{const c=await adbGet('vocals:'+id);if(c&&c.sig===sig&&c.data){vocalsMem={id,sig,data:c.data};return{data:c.data,cached:true}}}catch(e){}
-  const data=await sepRun();
+  lastInst=null;const data=await sepRun();
+  if(lastInst){instMem={id,sig,l:lastInst.l,r:lastInst.r};try{await adbSet('inst:'+id,{sig,l:lastInst.l,r:lastInst.r})}catch(e){}}
   vocalsMem={id,sig,data};try{await adbSet('vocals:'+id,{sig,data})}catch(e){note('Ojo: no pude guardar la voz separada en el navegador; se va a perder al cerrar la app.')}
   return{data,cached:false};
 }
+async function getInst(){
+  const id=PR.cur,sig=(audioName||'')+'|'+audioBlob.size+'|kimv2';
+  if(instMem&&instMem.id===id&&instMem.sig===sig)return instMem;
+  try{const c=await adbGet('inst:'+id);if(c&&c.sig===sig&&c.l){instMem={id,sig,l:c.l,r:c.r};return instMem}}catch(e){}
+  vocalsMem=null;try{await adbDel('vocals:'+id)}catch(e){}
+  await getVocals();
+  return instMem&&instMem.id===id?instMem:null;
+}
+function wavSt(l,r,sr){
+  const n=l.length,b=new ArrayBuffer(44+n*4),v=new DataView(b),W=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+  W(0,'RIFF');v.setUint32(4,36+n*4,true);W(8,'WAVE');W(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,2,true);v.setUint32(24,sr,true);v.setUint32(28,sr*4,true);v.setUint16(32,4,true);v.setUint16(34,16,true);W(36,'data');v.setUint32(40,n*4,true);
+  for(let i=0;i<n;i++){v.setInt16(44+i*4,l[i],true);v.setInt16(46+i*4,r[i],true)}
+  return new Blob([b],{type:'audio/wav'});
+}
+let karURL=null,karOn=false;
+function karOff(){
+  if(!karOn&&!karURL)return;
+  if(karOn&&!audioURL&&audioBlob)audioURL=URL.createObjectURL(audioBlob);
+  if(karOn&&audioURL){const t=a.currentTime,pl=!a.paused;a.src=audioURL;a.addEventListener('loadedmetadata',()=>{try{a.currentTime=t}catch(e){}if(pl)a.play().catch(()=>{})},{once:true})}
+  if(karURL){URL.revokeObjectURL(karURL);karURL=null}
+  karOn=false;const b=$('aukar');if(b)b.textContent='Karaoke (solo la música)';
+}
+$('aukar').onclick=async()=>{
+  if(!audioBlob){note('Este proyecto no tiene audio cargado.');return}
+  if(karOn){karOff();note('Volvió la canción completa.');return}
+  const id=PR.cur;if(!id||auBusy)return;
+  let inst=instMem&&instMem.id===id?instMem:null;
+  if(!inst){
+    auCancel=false;auPass='';auBase='Separando la música de la voz (puede tardar unos minutos)…';auT0=Date.now();auUI(true,auBase);$('aubi').style.width='0';
+    try{inst=await getInst()}catch(e){if(!auCancel&&e.message!=='cancelado')auUI(false,'No se pudo separar: '+e.message);return}
+    if(auCancel)return;
+    if(!inst){auUI(false,'Esta canción es demasiado larga (más de 10 minutos) para guardar la música sola.');return}
+    auUI(false,'Música separada lista.');
+    if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR()};$('ausl').hidden=$('aukar').hidden=false
+  }
+  const t=a.currentTime,pl=!a.paused;
+  karURL=URL.createObjectURL(wavSt(inst.l,inst.r,44100));a.src=karURL;karOn=true;$('aukar').textContent='Volver a la canción completa';
+  a.addEventListener('loadedmetadata',()=>{try{a.currentTime=t}catch(e){}if(pl)a.play().catch(()=>{})},{once:true});
+  note('Karaoke: suena solo la música. La vista previa sigue el mismo reproductor.');
+};
 function wav16(a,sr){
   const n=a.length,b=new ArrayBuffer(44+n*2),v=new DataView(b),W=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
   W(0,'RIFF');v.setUint32(4,36+n*2,true);W(8,'WAVE');W(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);W(36,'data');v.setUint32(40,n*2,true);
@@ -1805,7 +1865,7 @@ function wav16(a,sr){
   for(let i=0;i<n;i++)v.setInt16(44+i*2,Math.round(Math.max(-1,Math.min(1,a[i]*g))*32767),true);
   return new Blob([b],{type:'audio/wav'});
 }
-$('ausep').addEventListener('change',()=>{const p=PR.list[PR.cur];$('ausl').hidden=!((p&&p.vsv)||$('ausep').checked)});
+$('ausep').addEventListener('change',()=>{const p=PR.list[PR.cur];$('ausl').hidden=$('aukar').hidden=!((p&&p.vsv)||$('ausep').checked)});
 $('ausl').onclick=async()=>{
   const id=PR.cur;if(!id)return;let d=vocalsMem&&vocalsMem.id===id?vocalsMem.data:null;
   if(!d){try{const c=await adbGet('vocals:'+id);d=c&&c.data}catch(e){}}
@@ -1836,6 +1896,7 @@ async function adbTx(mode,fn){
 }
 const adbGet=id=>adbTx('readonly',s=>s.get(id)),adbSet=(id,rec)=>adbTx('readwrite',s=>s.put(rec,id)),adbDel=id=>adbTx('readwrite',s=>s.delete(id));
 function setAudio(blob,name){
+  if(karURL){URL.revokeObjectURL(karURL);karURL=null}karOn=false;{const kb=$('aukar');if(kb)kb.textContent='Karaoke (solo la música)'}
   if(audioURL)URL.revokeObjectURL(audioURL);
   audioURL=URL.createObjectURL(blob);a.src=audioURL;audioName=name;audioBlob=blob;buildPeaks(blob);
 }
@@ -2185,7 +2246,7 @@ $('pkl').onclick=e=>{
   if(b.classList.contains('pco')){if(id===PR.cur)closePicker();else openProj(id)}
   else if(b.classList.contains('pcd')){
     const p=PR.list[id];if(!confirm('¿Borrar el proyecto «'+p.name+'»? No se puede deshacer.'))return;
-    adbDel(id).catch(()=>{});adbDel('vocals:'+id).catch(()=>{});delete PR.list[id];if(id===PR.cur){unloadAudio();PR.cur=null;L=[];P={l:0,w:0};H=[];R=[];render();updH();pjUI()}
+    adbDel(id).catch(()=>{});adbDel('vocals:'+id).catch(()=>{});adbDel('inst:'+id).catch(()=>{});delete PR.list[id];if(id===PR.cur){unloadAudio();PR.cur=null;L=[];P={l:0,w:0};H=[];R=[];render();updH();pjUI()}
     savePR();pkRender();
   }
 };
