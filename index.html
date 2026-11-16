@@ -193,8 +193,13 @@ button,.btn,select{touch-action:manipulation}
 .kdots{display:flex;align-items:center;gap:clamp(.005rem,1.7cqw,.18rem);font-size:var(--DefaultLyricsSize);height:0;margin:0;opacity:0;transition:height .35s ease,margin .35s ease,opacity .3s linear}
 .kdots.now{height:1.2em;margin:.2em 0;opacity:1}
 .kdot{display:block;font-size:1.3em;line-height:.65;color:#fff;scale:.75;opacity:.35}
-#kpg{flex:1;height:4px;background:rgba(255,255,255,.2);border-radius:2px;overflow:hidden}
-#kpgi{display:block;height:100%;width:0;background:#1ed760}
+#kpg{flex:1;height:6px;background:rgba(255,255,255,.2);border-radius:3px;position:relative;cursor:pointer;touch-action:none;margin:0 8px}
+#kpg::before{content:"";position:absolute;left:-8px;right:-8px;top:-16px;bottom:-16px}
+#kpgi{display:block;height:100%;width:0;background:#1ed760;border-radius:3px;position:relative}
+#kpgi::after{content:"";position:absolute;right:-8px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;background:#1ed760;box-shadow:0 0 0 3px rgba(30,215,96,.3);transition:transform .12s}
+#kpg:hover #kpgi::after,#kpg.dn #kpgi::after{transform:scale(1.25)}
+#kp select{color-scheme:dark}
+#kp select option{background:#1c2422;color:#fff}
 .w{position:relative}
 .pick{position:absolute;top:-9px;right:-7px;width:20px;height:20px;padding:0;justify-content:center;border-radius:50%;font-size:11px;line-height:1;opacity:0;background:var(--pn2)}
 .ln:hover .pick,.w:focus-within .pick,.w.cur .pick{opacity:1}
@@ -942,7 +947,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.16',PK='lyricsync_projects';
+const APP_VERSION='3.17',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -2349,6 +2354,16 @@ function kpStart(){
 $('kpo').onclick=kpStart;
 $('kpx').onclick=kpClose;
 $('kpp').onclick=()=>{if(kp.virt){kp.vplay=!kp.vplay;if(kp.vplay&&kp.vt>=kp.vdur)kp.vt=0}else a.paused?a.play():a.pause()};
+(function(){
+  const g=$('kpg');let dn=false;
+  g.setAttribute('role','slider');g.setAttribute('tabindex','0');g.setAttribute('aria-label','Posición de la canción');
+  const dur=()=>kp.virt?kp.vdur:a.duration;
+  const seek=e=>{const r=g.getBoundingClientRect(),d=dur();if(!d||!isFinite(d)||r.width<=0)return;kpSeek(c01((e.clientX-r.left)/r.width)*d);kp.hold=0};
+  g.addEventListener('pointerdown',e=>{dn=true;g.classList.add('dn');try{g.setPointerCapture(e.pointerId)}catch(x){}seek(e);e.preventDefault()});
+  g.addEventListener('pointermove',e=>{if(dn)seek(e)});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>g.addEventListener(ev,()=>{dn=false;g.classList.remove('dn')}));
+  g.addEventListener('keydown',e=>{const k=e.key==='ArrowRight'?5:e.key==='ArrowLeft'?-5:0;if(k){kpSeek(kpT()+k);e.preventDefault()}});
+})();
 $('kpf').onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():$('kp').requestFullscreen()}catch(e){}};
 $('kpl').onclick=e=>{const el=e.target.closest('.kl'),q=el&&kp.lines[+el.dataset.i];if(q&&q.s0!=null){kpSeek(q.s0-.3);kp.hold=0}};
 $('kpl').addEventListener('wheel',()=>{kp.hold=performance.now()+3000},{passive:true});
