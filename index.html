@@ -141,6 +141,10 @@ button,.btn,select{touch-action:manipulation}
   .pick,.cut,.lnk{min-height:0;width:26px;height:26px;top:-12px;opacity:.9;font-size:13px}
   .pick{right:-8px}.cut{right:20px}.lnk{right:48px}
   .w{margin-top:6px}
+  .kpt{flex-wrap:wrap;gap:6px 10px;padding-left:12px;padding-right:12px}
+  .kpt b{flex:1 1 100%}
+  #kpfps{min-width:0!important}
+  .kpt select{max-width:46vw}
   .meta{flex-wrap:wrap;opacity:1}
   .meta button{min-height:34px}
   label.mu{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;max-width:100%}
@@ -157,6 +161,7 @@ button,.btn,select{touch-action:manipulation}
 #kp.q-baja #kbg i{display:none}
 .kpt,.kpb{position:relative;z-index:3;display:flex;align-items:center;gap:12px;padding:12px 20px}
 .kpt .sep{flex:1}
+.kjonly{display:none}#kp.kj .kjonly{display:inline-flex;align-items:center;gap:6px}#kjs{max-width:min(46vw,300px)}
 #kp select,#kp button{background:rgba(255,255,255,.14);color:#fff;border:1px solid transparent}
 #kp button:hover{border-color:#fff}
 #kp .pri{background:#1ed760;color:#04140a}
@@ -279,6 +284,7 @@ dialog p{margin:6px 0;color:var(--mu)}
 <div id="rem" class="rem" hidden></div>
 <details open id="pj"><summary>Proyectos</summary>
   <div class="row"><select id="pjs" aria-label="Proyecto"></select><button id="pjnew">Nuevo</button><button id="pjdup">Duplicar</button><button id="pjren">Renombrar</button><button id="pjdel">Borrar</button><button id="audx" title="Quita el audio guardado de este proyecto (la letra y los tiempos no se tocan)">Quitar audio</button><button id="bkx" title="Guarda todos tus proyectos en un archivo (sin los audios)">Exportar respaldo</button><label class="btn" title="Recupera proyectos desde un respaldo">Importar respaldo<input id="bki" type="file" accept=".json,application/json" hidden></label><button id="ins" class="pri" hidden>Instalar como app</button></div>
+  <div class="row"><button id="kjo" class="pri" title="Abre un reproductor de karaoke con tus proyectos que tengan audio y letra sincronizada: elige uno al azar y pasa solo a la siguiente">🎤 Reproductor karaoke</button><button id="kjc" title="Abre el reproductor empezando por el proyecto elegido arriba">Reproducir este proyecto</button><span class="mu">Solo se reproduce: no se edita nada. Al salir volvés acá.</span></div>
   <p id="pjinfo" class="mu" style="margin:8px 0 0"></p>
 </details>
 <details open><summary>Letra e importación</summary>
@@ -313,7 +319,7 @@ dialog p{margin:6px 0;color:var(--mu)}
       <label class="mu"><input id="auseg" type="checkbox"> Usar tiempos por frase (más estables que por palabra)</label>
     </div>
   </details>
-  <div class="row"><button id="aurun" class="pri">Sincronizar automáticamente</button><button id="aucan" hidden>Cancelar</button><button id="aurepdl" hidden title="Baja un archivo de texto con todo lo que hizo la sincronización: ajustes, qué oyó el modelo, qué palabras quedaron dudosas y los avisos. Sirve para pasarlo y revisar los errores.">Descargar resumen</button><button id="ausl" hidden title="Reproduce la voz aislada para comprobar qué tan bien quedó">Oír la voz separada</button><button id="aukar" hidden title="Cambia el reproductor principal (y la vista previa) a la música sola, sin la voz, para cantar encima">Karaoke (solo la música)</button><span id="aust" class="mu"></span></div>
+  <div class="row"><button id="aurun" class="pri">Sincronizar automáticamente</button><button id="aucan" hidden>Cancelar</button><button id="aurepdl" hidden title="Baja un archivo de texto con todo lo que hizo la sincronización: ajustes, qué oyó el modelo, qué palabras quedaron dudosas y los avisos. Sirve para pasarlo y revisar los errores.">Descargar resumen</button><button id="ausl" hidden title="Reproduce la voz aislada para comprobar qué tan bien quedó">Oír la voz separada</button><button id="aukar" hidden title="Cambia el reproductor principal (y la vista previa) a la música sola, sin la voz, para cantar encima">Karaoke (solo la música)</button><button id="auvv" hidden title="Cambia el reproductor principal (y la vista previa) a la voz sola">Escuchar solo la voz</button><button id="aukd" hidden title="Descarga la música sin voz como archivo WAV">Descargar karaoke</button><button id="auvd" hidden title="Descarga la voz sola como archivo WAV">Descargar voz sola</button><span id="aust" class="mu"></span></div>
   <div id="aubar" hidden><i id="aubi"></i></div>
   <audio id="ausa" controls hidden style="width:100%;margin-top:10px"></audio>
 </details>
@@ -364,6 +370,8 @@ dialog p{margin:6px 0;color:var(--mu)}
   <div id="kbg" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="kpt"><b id="kpn"></b><span class="sep"></span>
     <label>Estilo <select id="kps"><option value="full">Completo</option><option value="simple">Simple</option><option value="minimal">Mínimo</option></select></label>
+    <label class="kjonly">Canción <select id="kjs"></select></label><button class="kjonly" id="kjp" title="Canción anterior">⏮</button><button class="kjonly" id="kjn" title="Canción siguiente">⏭</button><label class="kjonly"><input id="kjr" type="checkbox" checked> Aleatorio</label><label class="kjonly"><input id="kja" type="checkbox" checked> Pasar sola a la siguiente</label>
+    <label>Audio <select id="kpa"><option value="full">Canción</option><option value="voice">Solo voz</option><option value="karaoke">Solo música</option></select></label>
     <label><input id="kpbl" type="checkbox" checked> Desenfoque</label>
     <label>Calidad <select id="kpq"><option value="auto">Auto (60 fps)</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></label>
     <span id="kpfps" style="font:12.5px ui-monospace,Menlo,Consolas,monospace;opacity:.8;min-width:9.5em"></span>
@@ -379,7 +387,7 @@ dialog p{margin:6px 0;color:var(--mu)}
     <div id="pkr" class="rem" hidden></div>
     <div id="pkl"></div>
     <div class="pknew"><input id="pkn" type="text" maxlength="80" placeholder="Nombre de la canción nueva" aria-label="Nombre del proyecto nuevo"><button id="pkc" class="pri">Crear proyecto</button></div>
-    <div class="row"><button id="pkxb">Exportar respaldo</button><label class="btn">Importar respaldo<input id="pkb" type="file" accept=".json,application/json" hidden></label><button id="pkx" hidden>Volver</button></div>
+    <div class="row"><button id="pkkj" class="pri">🎤 Reproductor karaoke</button><button id="pkxb">Exportar respaldo</button><label class="btn">Importar respaldo<input id="pkb" type="file" accept=".json,application/json" hidden></label><button id="pkx" hidden>Volver</button></div>
   </div>
 </div>
 <script>
@@ -934,7 +942,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.14',PK='lyricsync_projects';
+const APP_VERSION='3.16',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1033,7 +1041,7 @@ $('sp').onchange=()=>{a.playbackRate=+$('sp').value;$('sp').blur()};
 a.onloadedmetadata=()=>{a.playbackRate=+$('sp').value};
 $('af').onchange=e=>{
   const f=e.target.files[0];if(!f)return;e.target.value='';const id=PR.cur;
-  if(id){adbDel('vocals:'+id).catch(()=>{});adbDel('inst:'+id).catch(()=>{});vocalsMem=null;if(PR.list[id])PR.list[id].vsv=false;$('ausl').hidden=true}
+  if(id){adbDel('vocals:'+id).catch(()=>{});adbDel('inst:'+id).catch(()=>{});vocalsMem=null;if(PR.list[id]){PR.list[id].vsv=false;delete PR.list[id].stm}$('ausl').hidden=true}
   setAudio(f,f.name);
   if(id&&PR.list[id]){PR.list[id].audio=f.name;PR.list[id].asv=false;savePR();storeAudio(id,f)}
   pjUI();
@@ -1179,7 +1187,7 @@ function pjUI(){
   $('pjs').innerHTML=ids.map(id=>'<option value="'+id+'"'+(id===PR.cur?' selected':'')+'>'+X(PR.list[id].name)+'</option>').join('');
   const p=PR.list[PR.cur];
   $('cn').textContent=p?p.name:'Elegir proyecto';
-  if($('ausl'))$('ausl').hidden=$('aukar').hidden=!((p&&p.vsv)||$('ausep').checked);
+  if($('ausl'))$('ausl').hidden=$('aukar').hidden=$('auvv').hidden=$('aukd').hidden=$('auvd').hidden=!((p&&p.vsv)||$('ausep').checked);
   $('pjinfo').textContent=(p&&p.audio?(p.asv?'Audio guardado con este proyecto: '+p.audio+(p.asz?' ('+(p.asz/1048576).toFixed(1)+' MB)':'')+'. Se carga solo al abrirlo.':'Este proyecto usaba «'+p.audio+'», pero no quedó guardado: volvé a cargarlo con «Cargar audio».'):'Este proyecto todavía no tiene audio: cargalo con «Cargar audio» y queda guardado con el proyecto.')+' Último respaldo: '+(getMeta().last?new Date(getMeta().last).toLocaleDateString('es'):'nunca')+'.';
 }
 function openProj(id,noSave){
@@ -1405,7 +1413,7 @@ function resetVoicePlayer(){
 function unloadAudio(){
   try{a.pause()}catch(e){}
   resetVoicePlayer();
-  if(karURL){URL.revokeObjectURL(karURL);karURL=null}karOn=false;instMem=null;{const kb=$('aukar');if(kb)kb.textContent='Karaoke (solo la música)'}
+  modeReset();
   a.removeAttribute('src');try{a.load()}catch(e){}
   if(audioURL){URL.revokeObjectURL(audioURL);audioURL=null}
   audioName='';audioBlob=null;peaks=null;onsets=[];wv.msg='';wv.start=0;wv.sel=null;
@@ -1584,7 +1592,7 @@ $('aurun').onclick=async()=>{
       try{
         const v=await getVocals();vocals=v.data;
         sepNote=v.cached?' · voz separada tomada de la copia guardada':' · voz separada de los instrumentos';
-        if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR();$('ausl').hidden=$('aukar').hidden=false}
+        if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR();$('ausl').hidden=$('aukar').hidden=$('auvv').hidden=$('aukd').hidden=$('auvd').hidden=false}
         pkV=envFrom(vocals,16000,PPS);onsV=findOnsets(pkV);
       }catch(e){
         if(auCancel||e.message==='cancelado')return;
@@ -1891,7 +1899,7 @@ async function getVocals(){
   if(vocalsMem&&vocalsMem.id===id&&vocalsMem.sig===sig)return{data:vocalsMem.data,cached:true};
   try{const c=await adbGet('vocals:'+id);if(c&&c.sig===sig&&c.data){vocalsMem={id,sig,data:c.data};return{data:c.data,cached:true}}}catch(e){}
   lastInst=null;const data=await sepRun();
-  if(lastInst){instMem={id,sig,l:lastInst.l,r:lastInst.r,vl:lastInst.vl,vr:lastInst.vr};try{await adbSet('inst:'+id,{sig,l:lastInst.l,r:lastInst.r,vl:lastInst.vl,vr:lastInst.vr})}catch(e){}}
+  if(lastInst){instMem={id,sig,l:lastInst.l,r:lastInst.r,vl:lastInst.vl,vr:lastInst.vr};try{await adbSet('inst:'+id,{sig,l:lastInst.l,r:lastInst.r,vl:lastInst.vl,vr:lastInst.vr});markStems(id,!!lastInst.vl)}catch(e){}}
   vocalsMem={id,sig,data};try{await adbSet('vocals:'+id,{sig,data})}catch(e){note('Ojo: no pude guardar la voz separada en el navegador; se va a perder al cerrar la app.')}
   return{data,cached:false};
 }
@@ -1910,32 +1918,72 @@ function wavSt(l,r,sr,norm){
   for(let i=0;i<n;i++){v.setInt16(44+i*4,Math.max(-32768,Math.min(32767,Math.round(l[i]*g))),true);v.setInt16(46+i*4,Math.max(-32768,Math.min(32767,Math.round(r[i]*g))),true)}
   return new Blob([b],{type:'audio/wav'});
 }
-let karURL=null,karOn=false;
-function karOff(){
-  if(!karOn&&!karURL)return;
-  if(karOn&&!audioURL&&audioBlob)audioURL=URL.createObjectURL(audioBlob);
-  if(karOn&&audioURL){const t=a.currentTime,pl=!a.paused;a.src=audioURL;a.addEventListener('loadedmetadata',()=>{try{a.currentTime=t}catch(e){}if(pl)a.play().catch(()=>{})},{once:true})}
-  if(karURL){URL.revokeObjectURL(karURL);karURL=null}
-  karOn=false;const b=$('aukar');if(b)b.textContent='Karaoke (solo la música)';
+let karURL=null,karOn=false,audioMode='full',modeBusy=false;
+const MODE_NAME={full:'la canción completa',voice:'solo la voz',karaoke:'solo la música'};
+function markStems(id,hasVoc){const p=PR.list[id];if(p&&(p.stm||0)<(hasVoc?2:1)){p.stm=hasVoc?2:1;savePR()}}
+function modeUI(){
+  const k=$('aukar');if(k)k.textContent=audioMode==='karaoke'?'Volver a la canción completa':'Karaoke (solo la música)';
+  const v=$('auvv');if(v)v.textContent=audioMode==='voice'?'Volver a la canción completa':'Escuchar solo la voz';
+  const q=$('kpa');if(q)q.value=audioMode;
 }
-$('aukar').onclick=async()=>{
+function modeReset(){
+  if(karURL){URL.revokeObjectURL(karURL);karURL=null}
+  karOn=false;audioMode='full';instMem=null;modeUI();
+}
+/* devuelve las pistas separadas (música y voz en 44,1 kHz estéreo); si no están guardadas, separa la canción de nuevo */
+async function ensureStems(needVoc){
+  const id=PR.cur;if(!id||!audioBlob)return null;
+  const sig=(audioName||'')+'|'+audioBlob.size+'|kimv2';
+  let st=instMem&&instMem.id===id&&instMem.sig===sig&&(!needVoc||instMem.vl)?instMem:null;
+  if(st)return st;
+  try{const c=await adbGet('inst:'+id);if(c&&c.sig===sig&&c.l&&(!needVoc||c.vl)){markStems(id,!!c.vl);return instMem={id,sig,l:c.l,r:c.r,vl:c.vl||null,vr:c.vr||null}}}catch(e){}
+  if(auBusy)return null;
+  auCancel=false;auPass='';auBase='Separando la voz de la música (puede tardar unos minutos)…';auT0=Date.now();auUI(true,auBase);$('aubi').style.width='0';
+  const mirror=setInterval(()=>{const f=$('kpfps');if(f&&!$('kp').hidden)f.textContent=$('aust').textContent.slice(0,40)},500);
+  try{st=await getInst(needVoc)}
+  catch(e){clearInterval(mirror);if(!auCancel&&e.message!=='cancelado')auUI(false,'No se pudo separar: '+e.message);return null}
+  clearInterval(mirror);
+  if(auCancel)return null;
+  if(!st){auUI(false,'Esta canción es demasiado larga (más de 10 minutos) para guardar las pistas por separado.');return null}
+  auUI(false,'Voz y música separadas.');
+  if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR();$('ausl').hidden=$('aukar').hidden=$('auvv').hidden=$('aukd').hidden=$('auvd').hidden=false}
+  return st;
+}
+/* cambia lo que suena en el reproductor principal (y, con él, en la vista previa) */
+async function setAudioMode(mode){
+  if(!audioBlob){note('Este proyecto no tiene audio cargado.');modeUI();return}
+  if(mode===audioMode||modeBusy){modeUI();return}
+  modeBusy=true;const qa=$('kpa');if(qa)qa.disabled=true;
+  try{
+    let url=null;
+    if(mode==='full'){if(!audioURL)audioURL=URL.createObjectURL(audioBlob);url=audioURL}
+    else{
+      const st=await ensureStems(mode==='voice');
+      if(!st||(mode==='voice'&&!st.vl)){if(st&&mode==='voice')note('Canción muy larga: la voz sola solo está en calidad reducida (usá «Oír la voz separada»).');modeUI();return}
+      const blob=mode==='karaoke'?wavSt(st.l,st.r,44100):wavSt(st.vl,st.vr,44100,true);
+      url=URL.createObjectURL(blob);
+    }
+    const t=a.currentTime,pl=!a.paused,old=karURL;
+    a.src=url;a.addEventListener('loadedmetadata',()=>{try{a.currentTime=t}catch(e){}if(pl)a.play().catch(()=>{})},{once:true});
+    karURL=mode==='full'?null:url;if(old)URL.revokeObjectURL(old);
+    audioMode=mode;karOn=mode==='karaoke';modeUI();
+    note('Ahora suena '+MODE_NAME[mode]+(mode==='full'?'.':'. La vista previa sigue el mismo reproductor.'));
+  }finally{modeBusy=false;if(qa)qa.disabled=false;const f=$('kpfps');if(f&&!$('kp').hidden)f.textContent=''}
+}
+$('aukar').onclick=()=>setAudioMode(audioMode==='karaoke'?'full':'karaoke');
+$('auvv').onclick=()=>setAudioMode(audioMode==='voice'?'full':'voice');
+if($('kpa'))$('kpa').onchange=async()=>{await setAudioMode($('kpa').value);if(kj.on)kj.mode=audioMode};
+async function downloadStem(kind){
   if(!audioBlob){note('Este proyecto no tiene audio cargado.');return}
-  if(karOn){karOff();note('Volvió la canción completa.');return}
-  const id=PR.cur;if(!id||auBusy)return;
-  let inst=instMem&&instMem.id===id?instMem:null;
-  if(!inst){
-    auCancel=false;auPass='';auBase='Separando la música de la voz (puede tardar unos minutos)…';auT0=Date.now();auUI(true,auBase);$('aubi').style.width='0';
-    try{inst=await getInst()}catch(e){if(!auCancel&&e.message!=='cancelado')auUI(false,'No se pudo separar: '+e.message);return}
-    if(auCancel)return;
-    if(!inst){auUI(false,'Esta canción es demasiado larga (más de 10 minutos) para guardar la música sola.');return}
-    auUI(false,'Música separada lista.');
-    if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR()};$('ausl').hidden=$('aukar').hidden=false
-  }
-  const t=a.currentTime,pl=!a.paused;
-  karURL=URL.createObjectURL(wavSt(inst.l,inst.r,44100));a.src=karURL;karOn=true;$('aukar').textContent='Volver a la canción completa';
-  a.addEventListener('loadedmetadata',()=>{try{a.currentTime=t}catch(e){}if(pl)a.play().catch(()=>{})},{once:true});
-  note('Karaoke: suena solo la música. La vista previa sigue el mismo reproductor.');
-};
+  const st=await ensureStems(kind==='voz');
+  if(!st||(kind==='voz'&&!st.vl)){if(st)note('Canción muy larga: no se puede descargar la voz en calidad completa.');return}
+  const blob=kind==='voz'?wavSt(st.vl,st.vr,44100,true):wavSt(st.l,st.r,44100);
+  const base=(audioName||'cancion').replace(/\.[^.]+$/,'')+(kind==='voz'?' (solo voz).wav':' (karaoke).wav'),u=URL.createObjectURL(blob),x=document.createElement('a');
+  x.href=u;x.download=base;document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);
+  note('Descargado: '+base);
+}
+$('aukd').onclick=()=>downloadStem('karaoke');
+$('auvd').onclick=()=>downloadStem('voz');
 function wav16(a,sr){
   const n=a.length,b=new ArrayBuffer(44+n*2),v=new DataView(b),W=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
   W(0,'RIFF');v.setUint32(4,36+n*2,true);W(8,'WAVE');W(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);W(36,'data');v.setUint32(40,n*2,true);
@@ -1943,7 +1991,7 @@ function wav16(a,sr){
   for(let i=0;i<n;i++)v.setInt16(44+i*2,Math.round(Math.max(-1,Math.min(1,a[i]*g))*32767),true);
   return new Blob([b],{type:'audio/wav'});
 }
-$('ausep').addEventListener('change',()=>{const p=PR.list[PR.cur];$('ausl').hidden=$('aukar').hidden=!((p&&p.vsv)||$('ausep').checked)});
+$('ausep').addEventListener('change',()=>{const p=PR.list[PR.cur];$('ausl').hidden=$('aukar').hidden=$('auvv').hidden=$('aukd').hidden=$('auvd').hidden=!((p&&p.vsv)||$('ausep').checked)});
 $('ausl').onclick=async()=>{
   const id=PR.cur;if(!id)return;
   if(!audioBlob){note('Este proyecto no tiene audio cargado.');return}
@@ -1957,7 +2005,7 @@ $('ausl').onclick=async()=>{
     catch(e){if(!auCancel&&e.message!=='cancelado')auUI(false,'No se pudo separar la voz: '+e.message);return}
     if(auCancel)return;
     auUI(false,'Voz separada lista.');
-    if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR();$('ausl').hidden=$('aukar').hidden=false}
+    if(PR.list[PR.cur]){PR.list[PR.cur].vsv=true;savePR();$('ausl').hidden=$('aukar').hidden=$('auvv').hidden=$('aukd').hidden=$('auvd').hidden=false}
   }
   if(inst&&inst.vl)blob=wavSt(inst.vl,inst.vr,44100,true);
   else{
@@ -1984,7 +2032,7 @@ async function adbTx(mode,fn){
 const adbGet=id=>adbTx('readonly',s=>s.get(id)),adbSet=(id,rec)=>adbTx('readwrite',s=>s.put(rec,id)),adbDel=id=>adbTx('readwrite',s=>s.delete(id));
 function setAudio(blob,name){
   resetVoicePlayer();
-  if(karURL){URL.revokeObjectURL(karURL);karURL=null}karOn=false;{const kb=$('aukar');if(kb)kb.textContent='Karaoke (solo la música)'}
+  modeReset();
   if(audioURL)URL.revokeObjectURL(audioURL);
   audioURL=URL.createObjectURL(blob);a.src=audioURL;audioName=name;audioBlob=blob;buildPeaks(blob);
 }
@@ -2290,14 +2338,15 @@ function kpTick(){
   const dur=kp.virt?kp.vdur:a.duration;
   $('kpgi').style.width=dur?(c01(t/dur)*100)+'%':'0';$('kpm').textContent=F(t);$('kpp').textContent=kpPaused()?'▶':'⏸';
 }
-function kpClose(){kp.vplay=false;$('kp').hidden=true;document.body.style.overflow='';try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
-$('kpo').onclick=()=>{
+function kpClose(){if(kj.on){kjExit();return}kp.vplay=false;$('kp').hidden=true;document.body.style.overflow='';try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
+function kpStart(){
   kp.virt=!a.src;kp.vt=kp.virt?0:a.currentTime;kp.vplay=false;kp.lt=0;kp.ft=0;kp.hold=0;
   const ends=tl(L).map(w=>w[w.length-1].e);kp.vdur=ends.length?Math.max(...ends)+2:10;
   $('kp').hidden=false;document.body.style.overflow='hidden';kpSetQuality(kp.qsel==='auto'?'alta':kp.qsel);kp.fT=0;kp.fN=0;
   $('kpn').textContent=(PR.cur&&PR.list[PR.cur]?PR.list[PR.cur].name:'')+(kp.virt?' · sin audio: reproducción de prueba':'');
   $('kpl').scrollTop=0;kpMeasure();$('kpp').focus();
-};
+}
+$('kpo').onclick=kpStart;
 $('kpx').onclick=kpClose;
 $('kpp').onclick=()=>{if(kp.virt){kp.vplay=!kp.vplay;if(kp.vplay&&kp.vt>=kp.vdur)kp.vt=0}else a.paused?a.play():a.pause()};
 $('kpf').onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():$('kp').requestFullscreen()}catch(e){}};
@@ -2309,6 +2358,75 @@ $('kpq').onchange=()=>{kp.qsel=$('kpq').value;kpSetQuality(kp.qsel==='auto'?'alt
 $('kpbl').onchange=()=>{kp.reblur=true;$('kpbl').blur()};
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('kp').hidden)kpClose()});
 addEventListener('resize',()=>{if(!$('kp').hidden)kpMeasure()});
+
+
+/* ===== Reproductor karaoke: recorre tus proyectos solo para reproducir (sin editar) ===== */
+const kj={on:false,back:null,cur:null,mode:'full',tok:0,hist:[]};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function kjList(){
+  return Object.keys(PR.list).filter(id=>{const p=PR.list[id];return p&&p.asv&&Array.isArray(p.L)&&p.L.some(l=>l.w&&l.w.some(x=>x.s!=null))}).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
+}
+function kjFill(){
+  const ids=kjList(),sl=$('kjs');
+  sl.innerHTML=ids.map(id=>'<option value="'+id+'"'+(id===kj.cur?' selected':'')+'>'+X(PR.list[id].name)+((PR.list[id].stm||0)>=2?' · ♪':'')+'</option>').join('');
+}
+async function kjStart(first){
+  if(kj.on)return;
+  if(PR.cur&&PR.list[PR.cur])save();
+  const ids=kjList();
+  if(!ids.length){note('Para usar el reproductor hace falta al menos un proyecto con audio guardado y letra con tiempos.');return}
+  if(typeof sync!=='undefined'&&sync)$('sy').click();
+  kj.on=true;kj.back=PR.cur;kj.hist=[];kj.mode='full';kj.cur=null;
+  $('kp').classList.add('kj');
+  const id=first&&ids.includes(first)?first:ids[Math.floor(Math.random()*ids.length)];
+  await kjPlay(id);
+}
+async function kjPlay(id,fromHist){
+  if(!kj.on||!PR.list[id])return;
+  const tok=++kj.tok;
+  if(kj.cur&&!fromHist&&kj.cur!==id)kj.hist.push(kj.cur);
+  kj.cur=id;kjFill();
+  try{a.pause()}catch(e){}
+  kp.vplay=false;
+  $('kpn').textContent='Cargando «'+PR.list[id].name+'»…';
+  $('kp').hidden=false;document.body.style.overflow='hidden';
+  openProj(id,true);
+  for(let i=0;i<100&&tok===kj.tok&&!(audioBlob&&PR.cur===id&&a.getAttribute('src'));i++)await sleep(150);
+  if(tok!==kj.tok||!kj.on)return;
+  if(!(audioBlob&&PR.cur===id)){$('kpn').textContent='No pude cargar el audio de «'+PR.list[id].name+'»';return}
+  if(kj.mode!=='full'){
+    const p=PR.list[id],need=kj.mode==='voice'?2:1;
+    if((p.stm||0)>=need)await setAudioMode(kj.mode);
+    else note('«'+p.name+'» no tiene la voz y la música separadas: suena la canción completa. Elegí «Audio» arriba para separarla.');
+  }
+  if(tok!==kj.tok||!kj.on)return;
+  kpStart();
+  try{await a.play()}catch(e){}
+}
+function kjNext(){
+  const ids=kjList();if(!ids.length)return;
+  let n;
+  if($('kjr').checked&&ids.length>1){const o=ids.filter(x=>x!==kj.cur);n=o[Math.floor(Math.random()*o.length)]}
+  else{const i=ids.indexOf(kj.cur);n=ids[(i+1)%ids.length]}
+  kjPlay(n);
+}
+function kjPrev(){
+  if(kj.hist.length){kjPlay(kj.hist.pop(),true)}
+  else{try{a.currentTime=0}catch(e){}}
+}
+function kjExit(){
+  kj.on=false;kj.tok++;try{a.pause()}catch(e){}
+  $('kp').classList.remove('kj');kpClose();
+  const back=kj.back;kj.back=null;
+  if(back&&PR.list[back]){a.addEventListener('loadedmetadata',()=>{try{a.pause()}catch(e){}},{once:true});openProj(back,true)}
+  $('pj').open=true;setTimeout(()=>{try{$('pj').scrollIntoView({block:'start'})}catch(e){}},60);
+}
+$('kjo').onclick=()=>kjStart();
+$('kjc').onclick=()=>kjStart(PR.cur);
+$('pkkj').onclick=()=>kjStart();
+$('kjn').onclick=kjNext;$('kjp').onclick=kjPrev;
+$('kjs').onchange=()=>kjPlay($('kjs').value);
+a.addEventListener('ended',()=>{if(kj.on&&$('kja').checked){const t=kj.tok;setTimeout(()=>{if(kj.on&&t===kj.tok&&a.ended)kjNext()},1200)}});
 
 /* ===== Selector de proyecto (pantalla completa) ===== */
 function pkRender(){
