@@ -102,11 +102,16 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kp{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;overflow:hidden;background:#0a0d0c;color:#fff;color-scheme:dark;--DefaultLyricsSize:clamp(1.85rem,7cqw,3.5rem);--ga:.85;--gae:.5;--vn:.51;--vs:.497;--ls:1}
 #kp.simple{--ga:1;--gae:.3;--vn:.45;--vs:.35}
 #kp.minimal{--vn:.35;--vs:0;--ls:.965}
-#kbg{position:absolute;inset:0;overflow:hidden;z-index:0;background:#0a0d0c}
+#kbg{position:absolute;inset:0;overflow:hidden;z-index:0;background:var(--bgc,#0a0d0c)}
 #kbg i{position:absolute;width:75vmax;height:75vmax;will-change:transform;animation:kdrift 32s ease-in-out infinite alternate}
-#kbg i:nth-child(1){left:-32vmax;top:-45vmax;background:radial-gradient(circle,rgba(30,215,96,.5),rgba(30,215,96,0) 62%)}
-#kbg i:nth-child(2){right:-38vmax;top:2vmax;background:radial-gradient(circle,rgba(20,150,150,.5),rgba(20,150,150,0) 62%);animation-duration:40s}
-#kbg i:nth-child(3){left:-4vmax;bottom:-62vmax;background:radial-gradient(circle,rgba(80,86,210,.46),rgba(80,86,210,0) 62%);animation-duration:46s}
+#kbg i:nth-child(1){left:-32vmax;top:-45vmax;background:radial-gradient(circle,rgba(var(--c1,30,215,96),.5),rgba(var(--c1,30,215,96),0) 62%)}
+#kbg i:nth-child(2){right:-38vmax;top:2vmax;background:radial-gradient(circle,rgba(var(--c2,20,150,150),.5),rgba(var(--c2,20,150,150),0) 62%);animation-duration:40s}
+#kbg i:nth-child(3){left:-4vmax;bottom:-62vmax;background:radial-gradient(circle,rgba(var(--c3,80,86,210),.46),rgba(var(--c3,80,86,210),0) 62%);animation-duration:46s}
+#kthm{position:absolute;z-index:8;top:64px;right:12px;width:min(340px,calc(100vw - 24px));background:rgba(18,22,21,.96);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:12px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#kthm button{width:100%;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:4px;border-radius:12px;background:transparent;font-size:11px;min-height:0}
+#kthm button i{display:block;width:100%;aspect-ratio:1;border-radius:50%;border:2px solid transparent}
+#kthm button[aria-pressed=true] i{border-color:#fff}
+#kthm button[aria-pressed=true]{background:rgba(255,255,255,.12)}
 @keyframes kdrift{to{transform:translate3d(12vmax,7vmax,0)}}
 @media (prefers-reduced-motion:reduce){#kbg i{animation:none}}
 /* ===== Modo celular ===== */
@@ -161,7 +166,7 @@ button,.btn,select{touch-action:manipulation}
 #kp.q-baja #kbg i{display:none}
 .kpt,.kpb{position:relative;z-index:3;display:flex;align-items:center;gap:12px;padding:12px 20px}
 .kpt .sep{flex:1}
-.kjoff{display:inline-flex}#kp.kj .kjoff{display:none}.kjonly{display:none}#kp.kj .kjonly{display:inline-flex;align-items:center;gap:6px}#kjs{max-width:min(46vw,300px)}
+#kp .kjoff{display:inline-flex}#kp.kj .kjoff{display:none}#kp .kjonly{display:none}#kp.kj .kjonly{display:inline-flex;align-items:center;gap:6px}#kjs{max-width:min(46vw,300px)}
 #kp select,#kp button{background:rgba(255,255,255,.14);color:#fff;border:1px solid transparent}
 #kp button:hover{border-color:#fff}
 #kp .pri{background:#1ed760;color:#04140a}
@@ -372,6 +377,7 @@ dialog p{margin:6px 0;color:var(--mu)}
 </details>
 </main>
  <div id="kp" role="dialog" aria-modal="true" aria-label="Vista previa de la letra" hidden>
+  <div id="kthm" hidden role="dialog" aria-label="Colores del fondo"></div>
   <div id="kbg" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="kpt"><b id="kpn"></b><span class="sep"></span>
     <label>Estilo <select id="kps"><option value="full">Completo</option><option value="simple">Simple</option><option value="minimal">Mínimo</option></select></label>
@@ -381,7 +387,7 @@ dialog p{margin:6px 0;color:var(--mu)}
     <label><input id="kpbl" type="checkbox" checked> Desenfoque</label>
     <label>Calidad <select id="kpq"><option value="auto">Auto (60 fps)</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></label>
     <span id="kpfps" style="font:12.5px ui-monospace,Menlo,Consolas,monospace;opacity:.8;min-width:9.5em"></span>
-    <button id="kpf" title="Pantalla completa del navegador">⛶</button><button id="kpx" title="Cerrar (Esc)">✕ Cerrar</button></div>
+    <button id="kpth" title="Cambiar los colores del fondo">🎨 Fondo</button><button id="kpf" title="Pantalla completa del navegador">⛶</button><button id="kpx" title="Cerrar (Esc)">✕ Cerrar</button></div>
   <div id="kpw"><div id="kpl"><div id="kpi"></div></div></div>
   <i class="kfade t"></i><i class="kfade b"></i>
   <div class="kpb"><button id="kpp" class="pri">▶</button><div id="kpg"><i id="kpgi"></i></div><span id="kpm" style="font:12.5px ui-monospace,Menlo,Consolas,monospace;opacity:.8">00:00.000</span></div>
@@ -948,7 +954,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.18',PK='lyricsync_projects';
+const APP_VERSION='3.19',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -2345,7 +2351,7 @@ function kpTick(){
   const dur=kp.virt?kp.vdur:a.duration;
   $('kpgi').style.width=dur?(c01(t/dur)*100)+'%':'0';$('kpm').textContent=F(t);$('kpp').textContent=kpPaused()?'▶':'⏸';
 }
-function kpClose(){if(kj.on){kjExit();return}kp.vplay=false;$('kp').hidden=true;document.body.style.overflow='';try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
+function kpClose(){if(kj.on){kjExit();return}kp.vplay=false;$('kthm').hidden=true;$('kp').hidden=true;document.body.style.overflow='';try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
 function kpStart(){
   kp.virt=!a.src;kp.vt=kp.virt?0:a.currentTime;kp.vplay=false;kp.lt=0;kp.ft=0;kp.hold=0;
   const ends=tl(L).map(w=>w[w.length-1].e);kp.vdur=ends.length?Math.max(...ends)+2:10;
@@ -2460,6 +2466,36 @@ $('pkkj').onclick=()=>kjStart();
 $('kjn').onclick=kjNext;$('kjp').onclick=kjPrev;
 $('kjs').onchange=()=>kjPlay($('kjs').value);
 a.addEventListener('ended',kjCheckEnd);
+
+
+/* ===== Temas de color del fondo de la vista previa ===== */
+const KTH=[
+ ['verde','Verde','#0a0d0c','30,215,96','20,150,150','80,86,210'],
+ ['oceano','Océano','#070d14','30,120,230','0,190,220','60,60,200'],
+ ['atardecer','Atardecer','#130a09','255,110,60','235,60,120','255,180,70'],
+ ['violeta','Violeta','#0c0912','150,80,255','220,70,200','70,90,230'],
+ ['rosa','Rosa','#120a0e','255,90,150','255,140,120','180,70,220'],
+ ['fuego','Fuego','#130808','235,40,40','255,120,20','160,20,80'],
+ ['dorado','Dorado','#100d07','240,190,50','220,120,40','150,150,60'],
+ ['aurora','Aurora','#07100d','40,230,160','90,120,255','200,80,230'],
+ ['medianoche','Medianoche','#07080d','60,70,150','40,40,100','90,110,200'],
+ ['grafito','Grafito','#0b0b0c','120,120,130','80,85,95','150,150,160']
+];
+function kpTheme(k){
+  const t=KTH.find(x=>x[0]===k)||KTH[0],el=$('kp');
+  el.style.setProperty('--bgc',t[2]);el.style.setProperty('--c1',t[3]);el.style.setProperty('--c2',t[4]);el.style.setProperty('--c3',t[5]);
+  el.style.background=t[2];
+  setMeta({kpth:t[0]});
+  [...$('kthm').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===t[0]?'true':'false'));
+}
+(function(){
+  const box=$('kthm');
+  box.innerHTML=KTH.map(t=>'<button type="button" data-k="'+t[0]+'" aria-pressed="false" title="'+t[1]+'"><i style="background:radial-gradient(circle at 25% 28%,rgba('+t[3]+',.95),transparent 62%),radial-gradient(circle at 82% 38%,rgba('+t[4]+',.95),transparent 58%),radial-gradient(circle at 50% 100%,rgba('+t[5]+',.95),transparent 62%),'+t[2]+'"></i>'+t[1]+'</button>').join('');
+  box.addEventListener('click',e=>{const b=e.target.closest('button');if(b)kpTheme(b.dataset.k)});
+  $('kpth').onclick=e=>{e.stopPropagation();box.hidden=!box.hidden};
+  $('kp').addEventListener('click',e=>{if(!box.hidden&&!box.contains(e.target)&&e.target!==$('kpth'))box.hidden=true});
+  kpTheme(getMeta().kpth||'verde');
+})();
 
 /* ===== Selector de proyecto (pantalla completa) ===== */
 function pkRender(){
