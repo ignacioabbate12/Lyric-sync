@@ -161,7 +161,7 @@ button,.btn,select{touch-action:manipulation}
 #kp.q-baja #kbg i{display:none}
 .kpt,.kpb{position:relative;z-index:3;display:flex;align-items:center;gap:12px;padding:12px 20px}
 .kpt .sep{flex:1}
-.kjonly{display:none}#kp.kj .kjonly{display:inline-flex;align-items:center;gap:6px}#kjs{max-width:min(46vw,300px)}
+.kjoff{display:inline-flex}#kp.kj .kjoff{display:none}.kjonly{display:none}#kp.kj .kjonly{display:inline-flex;align-items:center;gap:6px}#kjs{max-width:min(46vw,300px)}
 #kp select,#kp button{background:rgba(255,255,255,.14);color:#fff;border:1px solid transparent}
 #kp button:hover{border-color:#fff}
 #kp .pri{background:#1ed760;color:#04140a}
@@ -375,6 +375,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <div id="kbg" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="kpt"><b id="kpn"></b><span class="sep"></span>
     <label>Estilo <select id="kps"><option value="full">Completo</option><option value="simple">Simple</option><option value="minimal">Mínimo</option></select></label>
+    <button class="kjoff" id="kje" title="Convierte esta vista previa en un reproductor karaoke con todos tus proyectos">🎤 Reproductor</button>
     <label class="kjonly">Canción <select id="kjs"></select></label><button class="kjonly" id="kjp" title="Canción anterior">⏮</button><button class="kjonly" id="kjn" title="Canción siguiente">⏭</button><label class="kjonly"><input id="kjr" type="checkbox" checked> Aleatorio</label><label class="kjonly"><input id="kja" type="checkbox" checked> Pasar sola a la siguiente</label>
     <label>Audio <select id="kpa"><option value="full">Canción</option><option value="voice">Solo voz</option><option value="karaoke">Solo música</option></select></label>
     <label><input id="kpbl" type="checkbox" checked> Desenfoque</label>
@@ -947,7 +948,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.17',PK='lyricsync_projects';
+const APP_VERSION='3.18',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -2340,6 +2341,7 @@ function kpTick(){
     box.scrollTop=Math.abs(d)<.5?target:box.scrollTop+d*Math.min(1,dt*6);
   }
   kpFps(now);
+  if(kj.on)kjCheckEnd();
   const dur=kp.virt?kp.vdur:a.duration;
   $('kpgi').style.width=dur?(c01(t/dur)*100)+'%':'0';$('kpm').textContent=F(t);$('kpp').textContent=kpPaused()?'▶':'⏸';
 }
@@ -2376,13 +2378,13 @@ addEventListener('resize',()=>{if(!$('kp').hidden)kpMeasure()});
 
 
 /* ===== Reproductor karaoke: recorre tus proyectos solo para reproducir (sin editar) ===== */
-const kj={on:false,back:null,cur:null,mode:'full',tok:0,hist:[]};
+const kj={adv:false,on:false,back:null,cur:null,mode:'full',tok:0,hist:[]};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function kjList(){
   return Object.keys(PR.list).filter(id=>{const p=PR.list[id];return p&&p.asv&&Array.isArray(p.L)&&p.L.some(l=>l.w&&l.w.some(x=>x.s!=null))}).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
 }
 function kjFill(){
-  const ids=kjList(),sl=$('kjs');
+  const ids=kjList(),sl=$('kjs');if(kj.cur&&PR.list[kj.cur]&&!ids.includes(kj.cur))ids.unshift(kj.cur);
   sl.innerHTML=ids.map(id=>'<option value="'+id+'"'+(id===kj.cur?' selected':'')+'>'+X(PR.list[id].name)+((PR.list[id].stm||0)>=2?' · ♪':'')+'</option>').join('');
 }
 async function kjStart(first){
@@ -2418,6 +2420,21 @@ async function kjPlay(id,fromHist){
   kpStart();
   try{await a.play()}catch(e){}
 }
+function kjEnter(){
+  if(kj.on)return;
+  if(PR.cur&&PR.list[PR.cur])save();
+  if(!kjList().length&&!PR.cur){note('Para usar el reproductor hace falta al menos un proyecto con audio guardado y letra con tiempos.');return}
+  kj.on=true;kj.back=PR.cur;kj.cur=PR.cur;kj.hist=[];kj.mode=audioMode;kj.adv=false;
+  $('kp').classList.add('kj');kjFill();
+  note('Reproductor karaoke: elegí otra canción arriba o dejá que pase sola.');
+}
+function kjCheckEnd(){
+  if(!kj.on||!$('kja').checked||kj.adv||modeBusy||kp.virt)return;
+  const d=a.duration;
+  if(!(a.ended||(d&&isFinite(d)&&a.currentTime>=d-.08)))return;
+  kj.adv=true;const t=kj.tok;
+  setTimeout(()=>{kj.adv=false;if(kj.on&&t===kj.tok&&$('kja').checked)kjNext()},1200);
+}
 function kjNext(){
   const ids=kjList();if(!ids.length)return;
   let n;
@@ -2437,11 +2454,12 @@ function kjExit(){
   $('pj').open=true;setTimeout(()=>{try{$('pj').scrollIntoView({block:'start'})}catch(e){}},60);
 }
 $('kjo').onclick=()=>kjStart();
+$('kje').onclick=kjEnter;
 $('kjc').onclick=()=>kjStart(PR.cur);
 $('pkkj').onclick=()=>kjStart();
 $('kjn').onclick=kjNext;$('kjp').onclick=kjPrev;
 $('kjs').onchange=()=>kjPlay($('kjs').value);
-a.addEventListener('ended',()=>{if(kj.on&&$('kja').checked){const t=kj.tok;setTimeout(()=>{if(kj.on&&t===kj.tok&&a.ended)kjNext()},1200)}});
+a.addEventListener('ended',kjCheckEnd);
 
 /* ===== Selector de proyecto (pantalla completa) ===== */
 function pkRender(){
