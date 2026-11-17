@@ -120,21 +120,28 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kthm button i{display:block;width:100%;aspect-ratio:1;border-radius:50%;border:2px solid transparent}
 #kthm button[aria-pressed=true] i{border-color:#fff}
 #kthm button[aria-pressed=true]{background:rgba(255,255,255,.12)}
-@keyframes kmv1{to{transform:translate3d(24vmax,16vmax,0) scale(1.25)}}
-@keyframes kmv2{to{transform:translate3d(-22vmax,18vmax,0) scale(1.22)}}
-@keyframes kmv3{to{transform:translate3d(20vmax,-22vmax,0) scale(1.25)}}
-#kp.anim #kbg i{animation:kmv1 14s ease-in-out infinite alternate}
+@keyframes kmv1{to{transform:translate3d(32vmax,22vmax,0) scale(1.3)}}
+@keyframes kmv2{to{transform:translate3d(-30vmax,24vmax,0) scale(1.28)}}
+@keyframes kmv3{to{transform:translate3d(28vmax,-30vmax,0) scale(1.3)}}
+#kp.anim #kbg i{animation:kmv1 11s ease-in-out infinite alternate}
 #kbg i:nth-child(n+4){display:none}
-#kp.ln #kbg i{display:block;width:175vmax;height:24vmax;right:auto;bottom:auto;left:50%;margin-left:-87vmax;border-radius:50%}
-#kp.ln #kbg i:nth-child(1){top:2%;rotate:-21deg;background:radial-gradient(closest-side,rgba(var(--c1,30,215,96),.7),rgba(var(--c1,30,215,96),0))}
-#kp.ln #kbg i:nth-child(2){top:24%;rotate:-14deg;background:radial-gradient(closest-side,rgba(var(--c2,20,150,150),.62),rgba(var(--c2,20,150,150),0))}
-#kp.ln #kbg i:nth-child(3){top:46%;rotate:-26deg;background:radial-gradient(closest-side,rgba(var(--c3,80,86,210),.66),rgba(var(--c3,80,86,210),0))}
-#kp.ln #kbg i:nth-child(4){top:66%;rotate:-17deg;background:radial-gradient(closest-side,rgba(var(--c1,30,215,96),.55),rgba(var(--c1,30,215,96),0))}
-#kp.ln #kbg i:nth-child(5){top:86%;rotate:-9deg;background:radial-gradient(closest-side,rgba(var(--c2,20,150,150),.6),rgba(var(--c2,20,150,150),0))}
-#kp.anim #kbg i:nth-child(4){animation-name:kmv3;animation-duration:22s}
-#kp.anim #kbg i:nth-child(5){animation-name:kmv2;animation-duration:25s}
-#kp.anim #kbg i:nth-child(2){animation-name:kmv2;animation-duration:17s}
-#kp.anim #kbg i:nth-child(3){animation-name:kmv3;animation-duration:20s}
+#kp.kln #kbg i{display:block;width:175vmax;height:24vmax;right:auto;bottom:auto;left:50%;margin-left:-87vmax;border-radius:50%}
+#kp.kln #kbg i:nth-child(1){top:2%;rotate:-21deg;background:radial-gradient(closest-side,rgba(var(--c1,30,215,96),.7),rgba(var(--c1,30,215,96),0))}
+#kp.kln #kbg i:nth-child(2){top:24%;rotate:-14deg;background:radial-gradient(closest-side,rgba(var(--c2,20,150,150),.62),rgba(var(--c2,20,150,150),0))}
+#kp.kln #kbg i:nth-child(3){top:46%;rotate:-26deg;background:radial-gradient(closest-side,rgba(var(--c3,80,86,210),.66),rgba(var(--c3,80,86,210),0))}
+#kp.kln #kbg i:nth-child(4){top:66%;rotate:-17deg;background:radial-gradient(closest-side,rgba(var(--c1,30,215,96),.55),rgba(var(--c1,30,215,96),0))}
+#kp.kln #kbg i:nth-child(5){top:86%;rotate:-9deg;background:radial-gradient(closest-side,rgba(var(--c2,20,150,150),.6),rgba(var(--c2,20,150,150),0))}
+#kp.anim #kbg i:nth-child(4){animation-name:kmv3;animation-duration:17s}
+#kp.anim #kbg i:nth-child(5){animation-name:kmv2;animation-duration:19s}
+@keyframes klm{to{transform:translate3d(var(--dx),var(--dy),0) scale(1.12);rotate:var(--rt)}}
+#kp.kln.anim #kbg i{animation-name:klm}
+#kp.kln.anim #kbg i:nth-child(1){--dx:18vmax;--dy:22vmax;--rt:-10deg;animation-duration:12s}
+#kp.kln.anim #kbg i:nth-child(2){--dx:-20vmax;--dy:18vmax;--rt:-26deg;animation-duration:15s}
+#kp.kln.anim #kbg i:nth-child(3){--dx:16vmax;--dy:-20vmax;--rt:-12deg;animation-duration:13s}
+#kp.kln.anim #kbg i:nth-child(4){--dx:-18vmax;--dy:-24vmax;--rt:-5deg;animation-duration:17s}
+#kp.kln.anim #kbg i:nth-child(5){--dx:20vmax;--dy:-16vmax;--rt:-24deg;animation-duration:14s}
+#kp.anim #kbg i:nth-child(2){animation-name:kmv2;animation-duration:13s}
+#kp.anim #kbg i:nth-child(3){animation-name:kmv3;animation-duration:15s}
 @media (prefers-reduced-motion:reduce){#kp.anim #kbg i{animation:none}}
 
 /* ===== Acordes ===== */
@@ -1305,7 +1312,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.28',PK='lyricsync_projects';
+const APP_VERSION='3.29',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -2858,7 +2865,7 @@ const KTH=[
  ['grafito','Grafito','#0b0b0c','120,120,130','80,85,95','150,150,160']
 ];
 function kpShape(s){
-  s=s==='lin'?'lin':'circ';$('kp').classList.toggle('ln',s==='lin');setMeta({kpsh:s});
+  s=s==='lin'?'lin':'circ';$('kp').classList.toggle('kln',s==='lin');setMeta({kpsh:s});
   document.querySelectorAll('#kthm [data-sh]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sh===s?'true':'false'));
 }
 function kpTheme(k){
