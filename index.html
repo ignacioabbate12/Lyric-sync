@@ -115,6 +115,8 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kpsep{width:15ch;color:#1ed760;opacity:1}
 #kthm{position:absolute;z-index:8;top:64px;right:12px;width:min(340px,calc(100vw - 24px));background:rgba(18,22,21,.96);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:12px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
 #kthm button{width:100%;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:4px;border-radius:12px;background:transparent;font-size:11px;min-height:0}
+#kthm .shp{grid-column:1/-1;display:flex;gap:8px;margin-bottom:2px}#kthm .shp button{flex:1;flex-direction:row;justify-content:center;padding:8px 6px;font-size:12.5px;border:1px solid rgba(255,255,255,.18);border-radius:10px;color:#fff}
+#kthm .shp button[aria-pressed=true]{background:rgba(255,255,255,.2);border-color:#fff}
 #kthm button i{display:block;width:100%;aspect-ratio:1;border-radius:50%;border:2px solid transparent}
 #kthm button[aria-pressed=true] i{border-color:#fff}
 #kthm button[aria-pressed=true]{background:rgba(255,255,255,.12)}
@@ -122,6 +124,15 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 @keyframes kmv2{to{transform:translate3d(-22vmax,18vmax,0) scale(1.22)}}
 @keyframes kmv3{to{transform:translate3d(20vmax,-22vmax,0) scale(1.25)}}
 #kp.anim #kbg i{animation:kmv1 14s ease-in-out infinite alternate}
+#kbg i:nth-child(n+4){display:none}
+#kp.ln #kbg i{display:block;width:175vmax;height:24vmax;right:auto;bottom:auto;left:50%;margin-left:-87vmax;border-radius:50%}
+#kp.ln #kbg i:nth-child(1){top:2%;rotate:-21deg;background:radial-gradient(closest-side,rgba(var(--c1,30,215,96),.7),rgba(var(--c1,30,215,96),0))}
+#kp.ln #kbg i:nth-child(2){top:24%;rotate:-14deg;background:radial-gradient(closest-side,rgba(var(--c2,20,150,150),.62),rgba(var(--c2,20,150,150),0))}
+#kp.ln #kbg i:nth-child(3){top:46%;rotate:-26deg;background:radial-gradient(closest-side,rgba(var(--c3,80,86,210),.66),rgba(var(--c3,80,86,210),0))}
+#kp.ln #kbg i:nth-child(4){top:66%;rotate:-17deg;background:radial-gradient(closest-side,rgba(var(--c1,30,215,96),.55),rgba(var(--c1,30,215,96),0))}
+#kp.ln #kbg i:nth-child(5){top:86%;rotate:-9deg;background:radial-gradient(closest-side,rgba(var(--c2,20,150,150),.6),rgba(var(--c2,20,150,150),0))}
+#kp.anim #kbg i:nth-child(4){animation-name:kmv3;animation-duration:22s}
+#kp.anim #kbg i:nth-child(5){animation-name:kmv2;animation-duration:25s}
 #kp.anim #kbg i:nth-child(2){animation-name:kmv2;animation-duration:17s}
 #kp.anim #kbg i:nth-child(3){animation-name:kmv3;animation-duration:20s}
 @media (prefers-reduced-motion:reduce){#kp.anim #kbg i{animation:none}}
@@ -423,7 +434,7 @@ dialog p{margin:6px 0;color:var(--mu)}
  <div id="kp" role="dialog" aria-modal="true" aria-label="Vista previa de la letra" hidden>
   <div id="kchord" aria-hidden="true"><b id="kcn"></b><span id="kcd"></span><span id="kcx"></span></div>
   <div id="kthm" hidden role="dialog" aria-label="Colores del fondo"></div>
-  <div id="kbg" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div id="kbg" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
   <div class="kpt"><b id="kpn"></b><span class="sep"></span>
     <label>Estilo <select id="kps"><option value="full">Completo</option><option value="simple">Simple</option><option value="minimal">Mínimo</option></select></label>
     <button class="kjoff" id="kje" title="Convierte esta vista previa en un reproductor karaoke con todos tus proyectos">🎤 Reproductor</button>
@@ -434,7 +445,7 @@ dialog p{margin:6px 0;color:var(--mu)}
     <label><input id="kpbl" type="checkbox" checked> Desenfoque</label>
     <label>Calidad <select id="kpq"><option value="auto">Auto (60 fps)</option><option value="alta">Alta</option><option value="animada">Alta + fondo animado</option><option value="media">Media</option><option value="baja">Baja</option></select></label>
     <span id="kpsep" hidden></span><span id="kpfps"></span>
-    <button id="kpth" title="Cambiar los colores del fondo">🎨 Fondo</button><button id="kpf" title="Pantalla completa limpia: solo la letra y el fondo">⛶ Pantalla completa</button><button id="kpx" title="Cerrar (Esc)">✕ Cerrar</button></div>
+    <button id="kpth" title="Cambiar los colores del fondo">🎨 Fondo</button><button id="kpf" title="Pantalla completa limpia: solo la letra y el fondo">⛶</button><button id="kpx" title="Cerrar (Esc)">✕ Cerrar</button></div>
   <button id="kpxx" title="Salir de la pantalla completa (Esc)" aria-label="Salir de la pantalla completa">✕</button>
   <div id="kpw"><div id="kpl"><div id="kpi"></div></div></div>
   <i class="kfade t"></i><i class="kfade b"></i>
@@ -1294,7 +1305,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.27',PK='lyricsync_projects';
+const APP_VERSION='3.28',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -2846,17 +2857,23 @@ const KTH=[
  ['medianoche','Medianoche','#07080d','60,70,150','40,40,100','90,110,200'],
  ['grafito','Grafito','#0b0b0c','120,120,130','80,85,95','150,150,160']
 ];
+function kpShape(s){
+  s=s==='lin'?'lin':'circ';$('kp').classList.toggle('ln',s==='lin');setMeta({kpsh:s});
+  document.querySelectorAll('#kthm [data-sh]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sh===s?'true':'false'));
+}
 function kpTheme(k){
   const t=KTH.find(x=>x[0]===k)||KTH[0],el=$('kp');
   el.style.setProperty('--bgc',t[2]);el.style.setProperty('--c1',t[3]);el.style.setProperty('--c2',t[4]);el.style.setProperty('--c3',t[5]);
   el.style.background=t[2];
   setMeta({kpth:t[0]});
-  [...$('kthm').children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===t[0]?'true':'false'));
+  [...$('kthm').querySelectorAll('[data-k]')].forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===t[0]?'true':'false'));
 }
 (function(){
   const box=$('kthm');
   box.innerHTML=KTH.map(t=>'<button type="button" data-k="'+t[0]+'" aria-pressed="false" title="'+t[1]+'"><i style="background:radial-gradient(circle at 25% 28%,rgba('+t[3]+',.95),transparent 62%),radial-gradient(circle at 82% 38%,rgba('+t[4]+',.95),transparent 58%),radial-gradient(circle at 50% 100%,rgba('+t[5]+',.95),transparent 62%),'+t[2]+'"></i>'+t[1]+'</button>').join('');
-  box.addEventListener('click',e=>{const b=e.target.closest('button');if(b)kpTheme(b.dataset.k)});
+  box.insertAdjacentHTML('afterbegin','<div class="shp"><button type="button" data-sh="circ" aria-pressed="true">● Círculos</button><button type="button" data-sh="lin" aria-pressed="false">╱ Líneas</button></div>');
+  box.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.sh)kpShape(b.dataset.sh);else kpTheme(b.dataset.k)});
+  kpShape(getMeta().kpsh||'circ');
   $('kpth').onclick=e=>{e.stopPropagation();box.hidden=!box.hidden};
   $('kp').addEventListener('click',e=>{if(!box.hidden&&!box.contains(e.target)&&e.target!==$('kpth'))box.hidden=true});
   kpTheme(getMeta().kpth||'verde');
