@@ -118,12 +118,12 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kthm button i{display:block;width:100%;aspect-ratio:1;border-radius:50%;border:2px solid transparent}
 #kthm button[aria-pressed=true] i{border-color:#fff}
 #kthm button[aria-pressed=true]{background:rgba(255,255,255,.12)}
-@keyframes kmv1{to{transform:translate3d(9vmax,6vmax,0) scale(1.1)}}
-@keyframes kmv2{to{transform:translate3d(-8vmax,7vmax,0) scale(1.08)}}
-@keyframes kmv3{to{transform:translate3d(7vmax,-8vmax,0) scale(1.1)}}
-#kp.anim #kbg i{animation:kmv1 19s ease-in-out infinite alternate}
-#kp.anim #kbg i:nth-child(2){animation-name:kmv2;animation-duration:23s}
-#kp.anim #kbg i:nth-child(3){animation-name:kmv3;animation-duration:27s}
+@keyframes kmv1{to{transform:translate3d(24vmax,16vmax,0) scale(1.25)}}
+@keyframes kmv2{to{transform:translate3d(-22vmax,18vmax,0) scale(1.22)}}
+@keyframes kmv3{to{transform:translate3d(20vmax,-22vmax,0) scale(1.25)}}
+#kp.anim #kbg i{animation:kmv1 14s ease-in-out infinite alternate}
+#kp.anim #kbg i:nth-child(2){animation-name:kmv2;animation-duration:17s}
+#kp.anim #kbg i:nth-child(3){animation-name:kmv3;animation-duration:20s}
 @media (prefers-reduced-motion:reduce){#kp.anim #kbg i{animation:none}}
 
 /* ===== Acordes ===== */
@@ -1294,7 +1294,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.26',PK='lyricsync_projects';
+const APP_VERSION='3.27',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
