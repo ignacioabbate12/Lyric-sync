@@ -106,7 +106,7 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kp.simple{--ga:1;--gae:.3;--vn:.45;--vs:.35}
 #kp.minimal{--vn:.35;--vs:0;--ls:.965}
 #kbg{position:absolute;inset:0;overflow:hidden;z-index:0;background:var(--bgc,#0a0d0c)}
-#kbg i{position:absolute;width:75vmax;height:75vmax;will-change:transform;animation:kdrift 32s ease-in-out infinite alternate}
+#kbg i{position:absolute;width:75vmax;height:75vmax;will-change:transform}
 #kbg i:nth-child(1){left:-32vmax;top:-45vmax;background:radial-gradient(circle,rgba(var(--c1,30,215,96),.5),rgba(var(--c1,30,215,96),0) 62%)}
 #kbg i:nth-child(2){right:-38vmax;top:2vmax;background:radial-gradient(circle,rgba(var(--c2,20,150,150),.5),rgba(var(--c2,20,150,150),0) 62%);animation-duration:40s}
 #kbg i:nth-child(3){left:-4vmax;bottom:-62vmax;background:radial-gradient(circle,rgba(var(--c3,80,86,210),.46),rgba(var(--c3,80,86,210),0) 62%);animation-duration:46s}
@@ -118,8 +118,13 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kthm button i{display:block;width:100%;aspect-ratio:1;border-radius:50%;border:2px solid transparent}
 #kthm button[aria-pressed=true] i{border-color:#fff}
 #kthm button[aria-pressed=true]{background:rgba(255,255,255,.12)}
-@keyframes kdrift{to{transform:translate3d(12vmax,7vmax,0)}}
-@media (prefers-reduced-motion:reduce){#kbg i{animation:none}}
+@keyframes kmv1{to{transform:translate3d(9vmax,6vmax,0) scale(1.1)}}
+@keyframes kmv2{to{transform:translate3d(-8vmax,7vmax,0) scale(1.08)}}
+@keyframes kmv3{to{transform:translate3d(7vmax,-8vmax,0) scale(1.1)}}
+#kp.anim #kbg i{animation:kmv1 19s ease-in-out infinite alternate}
+#kp.anim #kbg i:nth-child(2){animation-name:kmv2;animation-duration:23s}
+#kp.anim #kbg i:nth-child(3){animation-name:kmv3;animation-duration:27s}
+@media (prefers-reduced-motion:reduce){#kp.anim #kbg i{animation:none}}
 
 /* ===== Acordes ===== */
 #chdg{display:flex;flex-wrap:wrap;gap:10px;margin:6px 0 10px}
@@ -183,7 +188,6 @@ button,.btn,select{touch-action:manipulation}
   #deck #mk,.deck #mk,.deck #un{display:none}
 }
 
-#kp.q-media #kbg i,#kp.q-baja #kbg i{animation:none}
 #kp.q-baja #kbg i{display:none}
 .kpt,.kpb{position:relative;z-index:3;display:flex;align-items:center;gap:12px;padding:12px 20px}
 .kpt .sep{flex:1}
@@ -428,7 +432,7 @@ dialog p{margin:6px 0;color:var(--mu)}
     <label>Velocidad <select id="kpv"><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1× (normal)</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label>
     <label>Audio <select id="kpa"><option value="full">Canción</option><option value="voice">Solo voz</option><option value="karaoke">Solo música</option></select></label>
     <label><input id="kpbl" type="checkbox" checked> Desenfoque</label>
-    <label>Calidad <select id="kpq"><option value="auto">Auto (60 fps)</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select></label>
+    <label>Calidad <select id="kpq"><option value="auto">Auto (60 fps)</option><option value="alta">Alta</option><option value="animada">Alta + fondo animado</option><option value="media">Media</option><option value="baja">Baja</option></select></label>
     <span id="kpsep" hidden></span><span id="kpfps"></span>
     <button id="kpth" title="Cambiar los colores del fondo">🎨 Fondo</button><button id="kpf" title="Pantalla completa limpia: solo la letra y el fondo">⛶ Pantalla completa</button><button id="kpx" title="Cerrar (Esc)">✕ Cerrar</button></div>
   <button id="kpxx" title="Salir de la pantalla completa (Esc)" aria-label="Salir de la pantalla completa">✕</button>
@@ -1290,7 +1294,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.25',PK='lyricsync_projects';
+const APP_VERSION='3.26',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -2662,7 +2666,7 @@ function kpBlur(f){
 /* posiciones medidas una sola vez (leer offsetTop en cada cuadro obliga al navegador a recalcular el diseño) */
 function kpMeasure(){kp.chH=$('kpl').clientHeight;kp.lines.forEach(q=>{q.top=q.el.offsetTop})}
 function kpSetQuality(lv){
-  kp.q=lv;const k=$('kp').classList;k.remove('q-alta','q-media','q-baja');k.add('q-'+lv);
+  kp.q=lv;const k=$('kp').classList;k.remove('q-alta','q-media','q-baja');k.add('q-'+lv);k.toggle('anim',kp.qsel==='animada'&&lv==='alta');
   if(!$('kp').hidden){kpBuild();kpMeasure();kp.reblur=true}
   kp.ft=0;kp.low=0;kp.cool=performance.now()+2500;
 }
@@ -2670,7 +2674,7 @@ function kpFps(now){
   kp.fN++;if(!kp.fT)kp.fT=now;
   if(now-kp.fT<500)return;
   const fps=kp.fN*1000/(now-kp.fT);kp.fN=0;kp.fT=now;
-  $('kpfps').textContent=Math.round(fps)+' fps · '+QN[kp.q]+(kp.qsel==='auto'?' (auto)':'');
+  $('kpfps').textContent=Math.round(fps)+' fps · '+QN[kp.q]+(kp.qsel==='auto'?' (auto)':kp.qsel==='animada'?' + fondo animado':'');
   if(kp.qsel!=='auto'||document.hidden||now<kp.cool||kpPaused())return;
   kp.low=fps<52?kp.low+1:0;
   if(kp.low>=3&&kp.q!=='baja'){kpSetQuality(kp.q==='alta'?'media':'baja');$('kpfps').textContent+=' ↓'}
@@ -2704,7 +2708,7 @@ function kpStart(){
   kpRate(mainRate());
   kp.virt=!a.src;kp.vt=kp.virt?0:a.currentTime;kp.vplay=false;kp.lt=0;kp.ft=0;kp.hold=0;
   const ends=tl(L).map(w=>w[w.length-1].e);kp.vdur=ends.length?Math.max(...ends)+2:10;
-  $('kp').hidden=false;document.body.style.overflow='hidden';kpSetQuality(kp.qsel==='auto'?'alta':kp.qsel);kp.fT=0;kp.fN=0;
+  $('kp').hidden=false;document.body.style.overflow='hidden';kpSetQuality(kp.qsel==='auto'||kp.qsel==='animada'?'alta':kp.qsel);kp.fT=0;kp.fN=0;
   $('kpn').textContent=(PR.cur&&PR.list[PR.cur]?PR.list[PR.cur].name:'')+(kp.virt?' · sin audio: reproducción de prueba':'');
   $('kpl').scrollTop=0;kpMeasure();$('kpp').focus();
 }
@@ -2738,7 +2742,7 @@ $('kpl').addEventListener('wheel',()=>{kp.hold=performance.now()+3000},{passive:
 $('kpl').addEventListener('touchmove',()=>{kp.hold=performance.now()+3000},{passive:true});
 $('kps').onchange=()=>{kp.mode=$('kps').value;$('kp').classList.toggle('simple',kp.mode==='simple');$('kp').classList.toggle('minimal',kp.mode==='minimal');kpBuild();kpMeasure();kp.ft=0;$('kps').blur()};
 $('kpv').onchange=()=>{kpRate($('kpv').value);$('kpv').blur()};
-$('kpq').onchange=()=>{kp.qsel=$('kpq').value;kpSetQuality(kp.qsel==='auto'?'alta':kp.qsel);$('kpq').blur()};
+$('kpq').onchange=()=>{kp.qsel=$('kpq').value;kpSetQuality(kp.qsel==='auto'||kp.qsel==='animada'?'alta':kp.qsel);$('kpq').blur()};
 $('kpbl').onchange=()=>{kp.reblur=true;$('kpbl').blur()};
 addEventListener('keydown',e=>{if($('kp').hidden)return;if(e.key==='Escape'){if($('kp').classList.contains('imm'))kpImm(false);else kpClose()}else if(e.key===' '&&$('kp').classList.contains('imm')){e.preventDefault();$('kpp').click()}});
 addEventListener('resize',()=>{if(!$('kp').hidden)kpMeasure()});
