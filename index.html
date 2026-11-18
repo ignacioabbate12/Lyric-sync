@@ -39,7 +39,7 @@ details li{margin:4px 0}
 .row{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin:12px 0 0}
 textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border:1px solid var(--ln);border-radius:12px;padding:10px 12px;resize:vertical;font:16px/1.6 Georgia,"Iowan Old Style",serif}
 #ls{counter-reset:ln;margin-top:6px}
-.ln{counter-increment:ln;display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--ln);align-items:flex-start}
+.ln{content-visibility:auto;contain-intrinsic-size:auto 100px;counter-increment:ln;display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--ln);align-items:flex-start}
 .ln::before{content:counter(ln);width:22px;flex:none;text-align:right;padding-top:9px;color:var(--mu);font:12px ui-monospace,Menlo,Consolas,monospace}
 .ctl{display:flex;flex-direction:column;gap:4px;flex:none;opacity:.5}
 .ln:hover .ctl,.ln:focus-within .ctl{opacity:1}
@@ -1315,7 +1315,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.30',PK='lyricsync_projects';
+const APP_VERSION='3.31',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
