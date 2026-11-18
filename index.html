@@ -39,7 +39,7 @@ details li{margin:4px 0}
 .row{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin:12px 0 0}
 textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border:1px solid var(--ln);border-radius:12px;padding:10px 12px;resize:vertical;font:16px/1.6 Georgia,"Iowan Old Style",serif}
 #ls{counter-reset:ln;margin-top:6px}
-.ln{content-visibility:auto;contain-intrinsic-size:auto 100px;counter-increment:ln;display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--ln);align-items:flex-start}
+.ln{counter-increment:ln;display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--ln);align-items:flex-start}
 .ln::before{content:counter(ln);width:22px;flex:none;text-align:right;padding-top:9px;color:var(--mu);font:12px ui-monospace,Menlo,Consolas,monospace}
 .ctl{display:flex;flex-direction:column;gap:4px;flex:none;opacity:.5}
 .ln:hover .ctl,.ln:focus-within .ctl{opacity:1}
@@ -1315,7 +1315,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.32',PK='lyricsync_projects';
+const APP_VERSION='3.33',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1338,9 +1338,7 @@ function status(){const s=$('st');
   const ln=L[P.l];
   s.textContent=(P.w<ln.w.length?'Siguiente: «'+ln.w[P.w].t+'»':'Marcá el fin de la línea')+' · línea '+(P.l+1)+' de '+L.length+(holdMode?' · mantené presionado hasta que termine la palabra':'')}
 
-function render(){
-  const box=$('ls'),st=(+$('stp').value)||50;box.innerHTML='';chips=[];
-  L.forEach((ln,i)=>{
+function buildRow(ln,i,st){
     const row=document.createElement('div');row.className='ln';row.dataset.i=i;
     row.innerHTML=`<div class="ctl"><span class="grip" draggable="true" data-l="${i}" title="Arrastrá para mover la línea (si hay varias seleccionadas, se mueven juntas)">⠿</span><input type="checkbox" class="lsel" data-l="${i}" ${sel.has(ln)?'checked':''} aria-label="Seleccionar línea" title="Seleccionar (con Shift: rango)"><button data-a="play" data-l="${i}" title="Reproducir esta línea">▶</button><button data-a="here" data-l="${i}" title="Sincronizar desde esta línea">◎</button><button data-a="del" data-l="${i}" title="Borrar línea">✕</button></div>`;
     row.className='ln'+(ln.v===2?' v2':'')+(ln.bg?' bg':'')+(splitL===i?' splitting':'')+(sel.has(ln)?' sel':'');
@@ -1355,18 +1353,30 @@ function render(){
       c.innerHTML=`<input class="tx" value="${X(x.t)}" style="width:${Math.max(9,x.t.length+1)}ch" aria-label="Palabra"><input class="s" type="number" step="0.01" placeholder="inicio" value="${x.s==null?'':r3(x.s)}" aria-label="Inicio (s)"><input class="e" type="number" step="0.01" placeholder="${nx&&nx.s!=null?'auto':'fin'}" value="${x.e==null?'':r3(x.e)}" aria-label="Fin (s)"><button class="pick" data-a="pick" data-l="${i}" data-w="${j}" title="Elegir esta palabra: apretá espacio para marcarla con el tiempo actual" aria-label="Elegir esta palabra para marcarla con espacio">◎</button>${x.s!=null||x.e!=null?`<button class="wclr" data-a="wclr" data-l="${i}" data-w="${j}" title="Borrar el tiempo de esta palabra (la deja sin marcar; el resto no se toca)" aria-label="Borrar el tiempo de esta palabra">⌫</button>`:''}<button class="cut" data-a="cut" data-l="${i}" data-w="${j}" title="Partir esta palabra en dos partes, sin espacio: poné el cursor del texto entre dos letras y tocá ✂" aria-label="Partir palabra">✂</button>${j>0?`<button class="lnk" data-a="jn" data-l="${i}" data-w="${j}" title="${x.j?'Separar de la parte anterior (poner espacio)':'Pegar a la parte anterior (sin espacio)'}" aria-label="Pegar o separar de la palabra anterior">${x.j?'⌒':'·'}</button>`:''}`;
       ws.appendChild(c);chips[i][j]=c;
     });
-    row.appendChild(ws);box.appendChild(row);
-  });
-  if(document.activeElement!==$('tx'))$('tx').value=L.map(kt).join('\n');
+    row.appendChild(ws);return row;
+}
+/* render(): reconstruye toda la lista. render([líneas]): solo reemplaza esas filas (mucho más rápido, la vista no salta) */
+function render(only){
+  const box=$('ls'),st=(+$('stp').value)||50;
+  if(Array.isArray(only)&&box.children.length===L.length){
+    [...new Set(only)].forEach(i=>{if(i>=0&&i<L.length)box.children[i].replaceWith(buildRow(L[i],i,st))});
+  }else{
+    box.innerHTML='';chips=[];L.forEach((ln,i)=>box.appendChild(buildRow(ln,i,st)));
+  }
+  {const tv=L.map(kt).join('\n'),ta=$('tx');if(document.activeElement!==ta&&ta.value!==tv)ta.value=tv}
   for(const l of [...sel])if(!L.includes(l))sel.delete(l);
   const si=selIdx();$('selbar').hidden=!si.length;$('selc').textContent=si.length+(si.length===1?' línea seleccionada':' líneas seleccionadas');
   status();afterRender();
-  if(sync&&wantScroll){const c=box.querySelector('.cur,.curend');if(c)c.scrollIntoView({block:'center'})}
+  if(sync&&wantScroll){const c=box.querySelector('.cur,.curend');
+    if(c){const r=c.getBoundingClientRect(),vh=innerHeight,cy=r.top+r.height/2;
+      /* si el cursor ya está en la zona media de la pantalla no se mueve la vista: así no "baila" con cada marca */
+      if(!(Array.isArray(only)&&cy>vh*.3&&cy<vh*.75))c.scrollIntoView({block:'center'})}}
   wantScroll=false;
 }
 
 function mark(){
   if(P.l>=L.length)return;
+  const l0=P.l;
   hist();
   const ln=L[P.l],n=ln.w.length,t=Math.max(0,a.currentTime-$('comp').value/1000);
   if(P.w<n){const x=ln.w[P.w];x.s=t;x.e=null;
@@ -1374,7 +1384,7 @@ function mark(){
     if(P.w===n-1&&noEnd()){x.e=t+CAP;P={l:P.l+1,w:0}}else P.w++;
   }else{ln.w[n-1].e=t;P={l:P.l+1,w:0}}
   if(selOne){selOne=false;P=firstOpen()}
-  wantScroll=true;render();save();
+  wantScroll=true;render([l0-1,l0,P.l]);save();
 }
 function undo(){
   let{l,w}=P;
@@ -1383,8 +1393,8 @@ function undo(){
   hist();
   const ln=L[l],n=ln.w.length;let old;
   if(w<n){old=ln.w[w].s;ln.w[w].s=null;ln.w[w].e=null}else{old=ln.w[n-1].e;ln.w[n-1].e=null}
-  P={l,w};if(old!=null)a.currentTime=Math.max(0,old-1);
-  wantScroll=true;render();save();
+  const p0=P.l;P={l,w};if(old!=null)a.currentTime=Math.max(0,old-1);
+  wantScroll=true;render([l-1,l,p0,p0-1,P.l]);save();
 }
 
 /* Teclado */
@@ -1537,7 +1547,8 @@ function shiftFrom(i,d,toEnd){
 /* ===== Avisos ===== */
 function afterRender(){
   const IS=check(L),hard=IS.filter(x=>!x.soft);
-  IS.forEach(x=>{const c=x.w!=null&&chips[x.l]&&chips[x.l][x.w];if(c){c.classList.add('warn');c.title=(c.title?c.title+' · ':'')+x.m}});
+  $('ls').querySelectorAll('.w.warn').forEach(c=>{c.classList.remove('warn');c.title=c.dataset.t0||'';delete c.dataset.t0});
+  IS.forEach(x=>{const c=x.w!=null&&chips[x.l]&&chips[x.l][x.w];if(c){if(!c.classList.contains('warn'))c.dataset.t0=c.title||'';c.classList.add('warn');c.title=(c.title?c.title+' · ':'')+x.m}});
   $('avs').textContent='Avisos'+(hard.length?' ('+hard.length+')':IS.length?'':' ✓');
   const av=$('av');av.innerHTML=IS.length?'':'<p class="mu">Sin avisos.</p>';
   IS.slice(0,100).forEach(x=>{const b=document.createElement('button');b.className='tr'+(x.soft?' mu':'');
@@ -1780,7 +1791,7 @@ function clearLine(i){
 function clearWord(l,w){
   const x=L[l]&&L[l].w[w];if(!x||(x.s==null&&x.e==null)){note('Esa palabra ya no tiene tiempo.');return}
   hist();x.s=null;x.e=null;
-  render();save();
+  render([l-1,l]);save();
   note('Tiempo de «'+x.t+'» borrado. Ctrl+Z lo recupera.');
 }
 function pickWord(l,w){
