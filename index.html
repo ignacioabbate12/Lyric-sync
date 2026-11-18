@@ -1315,7 +1315,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.31',PK='lyricsync_projects';
+const APP_VERSION='3.32',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1761,7 +1761,8 @@ $('wz').onchange=()=>$('wz').blur();
   lastOn.forEach(c=>{if(!on.includes(c))c.classList.remove('on')});
   on.forEach(c=>c.classList.add('on'));lastOn=on;
   if(follow&&!a.paused&&on.length){const n=+on[0].dataset.l;
-    if(n!==lastLine){lastLine=n;on[0].closest('.ln').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'})}}
+    /* Sincronizando: la vista sigue al cursor de marcado; si suena una parte con tiempos viejos lejos del cursor, no la arrastra hacia allá */
+    if(n!==lastLine&&(!sync||Math.abs(n-Math.min(P.l,L.length-1))<=1)){lastLine=n;on[0].closest('.ln').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'})}}
   if(wv.on)drawWave();
   if(!$('kp').hidden)kpTick();
   requestAnimationFrame(loop);
