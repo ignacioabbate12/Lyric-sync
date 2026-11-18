@@ -1315,7 +1315,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.33',PK='lyricsync_projects';
+const APP_VERSION='3.34',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -1374,8 +1374,10 @@ function render(only){
   wantScroll=false;
 }
 
+let noFollowUntil=0;
 function mark(){
   if(P.l>=L.length)return;
+  noFollowUntil=performance.now()+2000;
   const l0=P.l;
   hist();
   const ln=L[P.l],n=ln.w.length,t=Math.max(0,a.currentTime-$('comp').value/1000);
@@ -1772,8 +1774,8 @@ $('wz').onchange=()=>$('wz').blur();
   lastOn.forEach(c=>{if(!on.includes(c))c.classList.remove('on')});
   on.forEach(c=>c.classList.add('on'));lastOn=on;
   if(follow&&!a.paused&&on.length){const n=+on[0].dataset.l;
-    /* Sincronizando: la vista sigue al cursor de marcado; si suena una parte con tiempos viejos lejos del cursor, no la arrastra hacia allá */
-    if(n!==lastLine&&(!sync||Math.abs(n-Math.min(P.l,L.length-1))<=1)){lastLine=n;on[0].closest('.ln').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'})}}
+    /* justo después de marcar con espacio manda el cursor de marcado (≈2 s); el resto del tiempo la vista sigue lo que suena */
+    if(n!==lastLine&&performance.now()>noFollowUntil){lastLine=n;on[0].closest('.ln').scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth'})}}
   if(wv.on)drawWave();
   if(!$('kp').hidden)kpTick();
   requestAnimationFrame(loop);
