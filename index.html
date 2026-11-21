@@ -380,7 +380,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <audio id="ausa" controls hidden style="width:100%;margin-top:10px"></audio>
 </details>
 <details id="chd"><summary>Acordes</summary>
-  <p class="mu" style="margin:0 0 10px">Cargá un archivo con los acordes de la canción: un .txt (o .cho / .pro) con los acordes escritos arriba de la letra, o con el formato ChordPro (<code>[Am]Tengo unos [G]tatuajes</code>). Sirven nombres americanos (C, Am7, F#m) y latinos (Do, Lam, Sol7). La app busca cada línea del archivo en la letra de este proyecto y pone los acordes en el momento en que se canta esa palabra, así que primero cargá y sincronizá la letra.</p>
+  <p class="mu" style="margin:0 0 10px">Cargá un archivo con los acordes de la canción (.txt, .cho, .pro). Puede traer los acordes arriba de la letra, en formato ChordPro (<code>[Am]Tengo unos [G]tatuajes</code>) o solo la progresión por compases y secciones (<code>[Estrofa]</code> <code>| Am | G |</code>, con <code>x2</code> para repetir). Sirven nombres americanos (C, Am7, F#m) y latinos (Do, Lam, Sol7). Si trae la letra, la app busca cada línea en la de este proyecto y pone el acorde cuando se canta esa palabra; si no la trae, reparte los compases según los tiempos de tu letra. En los dos casos primero cargá y sincronizá la letra.</p>
   <div class="row"><label class="btn pri" style="cursor:pointer">Cargar acordes de un archivo…<input id="chfile" type="file" accept=".txt,.cho,.chopro,.chordpro,.crd,.pro,text/plain" hidden></label><span id="chst" class="mu"></span></div>
   <div class="row">
     <label class="mu">Alteraciones <select id="chacc"><option value="auto">Automático según el tono</option><option value="s">Sostenidos (#)</option><option value="b">Bemoles (♭)</option></select></label>
@@ -1134,6 +1134,7 @@ function parseChord(tok){
     return CH_SHARP[r]+chQuality(sfx);
   };
   let m=/^(Sol|Do|Re|Mi|Fa|La|Si)([#♯♭b]?)(.*)$/.exec(s);
+  if(m&&/^o/.test(m[3]))m=null;
   if(m){const c=mk(CH_LATN[m[1].toLowerCase()],m[2],m[3]);if(c)return c;
     const m2=/^(Sol|Do|Re|Mi|Fa|La|Si)()(.*)$/.exec(s);if(m2&&m2[2]===''&&m[2]){const c2=mk(CH_LATN[m2[1].toLowerCase()],'',m[2]+m[3]);if(c2)return c2}}
   m=/^([A-G])([#♯♭b]?)(.*)$/.exec(s);
@@ -1157,8 +1158,14 @@ function chordLine(line){
   }
   if(other||!out.length)return null;
   if(tot===1&&plainLatin===1&&!lm)return null; /* "La", "Sol" solos: lo más probable es letra */
+  /* compases: si hay barras "| Am | G |" cada celda es un compás; si no, cada acorde es un compás */
+  if(s.includes('|')){
+    out.bars=s.split('|').map(cell=>cell.split(/\s+/).map(t=>t.replace(/^\[+|\]+$/g,'')).filter(t=>t&&!CH_SEP.test(t)).map(parseChord).filter(Boolean)).filter(b=>b.length);
+  }else out.bars=out.map(x=>[x.c]);
   return out;
 }
+const CH_HDR=/^\s*(?:[\[(]\s*([^\])]+?)\s*[\])]|((?:intro(?:ducci[oó]n)?|estrofa|verso|coro|estribillo|puente|solo|outro|final|pre-?coro|pre-?estribillo|interludio|instrumental|verse|chorus|bridge|pre-?chorus|interlude|tag|refr[aá]n|base|riff|parte|ritornelo)\s*\d*))\s*:?\s*(?:[(]?\s*[xX]\s*(\d+)\s*[)]?|[(]?\s*(\d+)\s*[xX]\s*[)]?)?\s*$/i;
+const CH_VOCAL=/estrofa|verso|coro|estribillo|puente|pre-?|verse|chorus|bridge|refr|parte/i,CH_INSTR=/intro|solo|final|outro|interludio|instrumental|interlude|tag|riff|base/i;
 const chNorm=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9ñ ]+/g,' ').replace(/\s+/g,' ').trim();
 const CH_PRO=/\[(?:[A-G][#b♯♭]?|Do|Re|Mi|Fa|Sol|La|Si)[^\]\s]{0,10}\]/;
 /* texto del archivo → entradas [{type:'lyric',text,chords:[{c,col}]} | {type:'chords',chords:[{c}]}] */
@@ -1166,11 +1173,15 @@ function parseChordSheet(text){
   const lines=String(text).replace(/^\uFEFF/,'').split(/\r?\n/),out=[];
   const pro=lines.some(l=>CH_PRO.test(l)&&[...l.matchAll(/\[([^\]]*)\]/g)].some(x=>parseChord(x[1])));
   let pend=null;
-  const flush=()=>{if(pend){out.push({type:'chords',chords:pend});pend=null}};
+  const flush=()=>{if(pend){out.push({type:'chords',chords:pend,bars:pend.bars});pend=null}};
   for(const raw of lines){
     const line=raw.replace(/\s+$/,'');
     if(!line.trim()){flush();continue}
     if(/^\s*[{#]/.test(line)&&(pro||/^\s*\{/.test(line)))continue;
+    if(/^\s*(?:tono|tonalidad|key|cejilla|capo|capotraste)\b/i.test(line)){
+      const cm=/(?:cejilla|capotraste|capo)\s*(?:en\s*(?:el\s*)?(?:traste\s*)?)?:?\s*(\d{1,2})/i.exec(line),km=/(?:tono|tonalidad|key)\s*:\s*([A-Ga-g][#b♯♭]?m?|(?:Do|Re|Mi|Fa|Sol|La|Si)[#b♯♭]?m?)(?![a-z])/i.exec(line);
+      flush();out.push({type:'meta',capo:cm?+cm[1]:null,key:km?km[1]:null});continue;
+    }
     if(pro){
       let plain='',cs=[],last=0;
       for(const m of line.matchAll(/\[([^\]]*)\]/g)){
@@ -1182,7 +1193,9 @@ function parseChordSheet(text){
       out.push({type:'lyric',text:plain,chords:cs});continue;
     }
     const cl=chordLine(line);
-    if(cl){flush();pend=cl;continue}
+    if(cl){flush();const lm=CH_LABEL.exec(line);if(lm&&lm[0].trim())out.push({type:'sec',label:lm[0].replace(/[\[\]():]/g,'').trim(),reps:1});pend=cl;continue}
+    const hm=CH_HDR.exec(line);
+    if(hm){flush();out.push({type:'sec',label:(hm[1]||hm[2]||'').trim(),reps:+(hm[3]||hm[4]||1)||1});continue}
     if(/^\s*[\[(][^\])]*[\])]\s*:?\s*$/.test(line)||(CH_LABEL.test(line)&&!line.replace(CH_LABEL,'').trim())){flush();continue}
     out.push({type:'lyric',text:line,chords:pend||[]});pend=null;
   }
@@ -1296,6 +1309,59 @@ function keyFromChords(segs){
   return{r:best.r,mode:best.mode};
 }
 
+/* archivo de solo acordes (sin letra): lista de compases en orden, con las secciones y sus repeticiones
+   → [{c:['Bm'],v:1|0,ps:1 si empieza una pasada de sección cantada}] y metadatos {capo,key} */
+function chBarsFromEntries(entries){
+  const bars=[];let sec={label:'',reps:1,vocal:true},cur=[],meta={capo:null,key:null},started=false;
+  const flushSec=()=>{
+    if(!cur.length){return}
+    for(let r=0;r<sec.reps;r++)cur.forEach((b,i)=>bars.push({c:b,v:sec.vocal?1:0,ps:sec.vocal&&i===0?1:0}));
+    cur=[];
+  };
+  entries.forEach(e=>{
+    if(e.type==='meta'){if(e.capo!=null)meta.capo=e.capo;if(e.key)meta.key=e.key;return}
+    if(e.type==='sec'){flushSec();const l=e.label||'';sec={label:l,reps:e.reps||1,vocal:CH_INSTR.test(l)&&!CH_VOCAL.test(l)?false:true};started=true;return}
+    if(e.type==='chords'&&e.bars&&e.bars.length){cur.push(...e.bars)}
+  });
+  flushSec();
+  return{bars,meta};
+}
+/* reparte los compases sobre el audio usando los tiempos de la letra: el largo de compás se ajusta al tramo cantado,
+   y cada comienzo de estrofa/estribillo se "pega" al inicio de línea cercano que viene después de una pausa */
+function chBuildBars(L,bars,dur){
+  const ls=[];L.forEach((ln,i)=>{const t=chLineT(ln);if(t)ls.push({i,s:t.s,e:t.e})});
+  if(!ls.length||!bars.length)return{segs:[],miss:bars.length,info:null};
+  let fv=bars.findIndex(b=>b.v),lv=-1;bars.forEach((b,i)=>{if(b.v)lv=i});
+  if(fv<0){fv=0;lv=bars.length-1}
+  const S1=ls[0].s,Send=ls[ls.length-1].e,nV=lv-fv+1;
+  let T=(Send-S1)/nV;if(!(T>.2))T=2;
+  /* anclas: [índice de compás, tiempo] */
+  const anc=[[fv,S1]];
+  const gap=i=>i===0?1e9:ls[i].s-ls[i-1].e;
+  let snapped=0,tries=0;
+  for(let k=fv+1;k<=lv;k++){
+    if(!bars[k].ps)continue;tries++;
+    const p=S1+(k-fv)*T;let best=-1,bg=-1,bd=1e9;
+    ls.forEach((x,i)=>{const d=Math.abs(x.s-p);if(d<=1.2*T&&x.s>anc[anc.length-1][1]+T){const g=gap(i);if(g>bg+1e-6||(Math.abs(g-bg)<1e-6&&d<bd)){bg=g;bd=d;best=i}}});
+    if(best>=0){anc.push([k,ls[best].s]);snapped++}
+  }
+  const tAt=k=>{
+    if(k<fv){return fv*T<=S1?S1-(fv-k)*T:k*S1/Math.max(1,fv)}
+    let a=anc[0];for(const x of anc)if(x[0]<=k)a=x;
+    const i=anc.indexOf(a),b=anc[i+1];
+    return b?a[1]+(k-a[0])*(b[1]-a[1])/(b[0]-a[0]):a[1]+(k-a[0])*T;
+  };
+  const pts=[];
+  bars.forEach((b,k)=>{
+    const t0=tAt(k),t1=k+1<bars.length?tAt(k+1):t0+T;
+    if(dur&&t0>=dur-.1)return;
+    b.c.forEach((c,j)=>pts.push({t:t0+(t1-t0)*j/b.c.length,c}));
+  });
+  const segs=[];pts.forEach(p=>{const l=segs[segs.length-1];if(l&&l.c===p.c)return;segs.push({s:Math.round(p.t*1000)/1000,e:0,c:p.c})});
+  segs.forEach((g,i)=>{g.e=i+1<segs.length?segs[i+1].s:Math.min(dur||1e9,g.s+T)});
+  return{segs,miss:0,info:{T,bars:bars.length,passes:tries+1,snapped:snapped+1}};
+}
+
 /*ENDPURE*/
 
 function parseTTML(x){const d=new DOMParser().parseFromString(x,'application/xml');
@@ -1329,7 +1395,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.35',PK='lyricsync_projects';
+const APP_VERSION='3.36',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 const savePR=()=>{try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
@@ -2942,8 +3008,8 @@ function chRender(){
   chRefresh();
   const p=chData(),res=$('chres');
   res.hidden=!p;if(!p){$('chl').innerHTML='';return}
-  const nt=chNot(),tr=chTr(),sh=chSh(),fl=chFlat();
   $('chcapo').value=String(p.capo||0);
+  const nt=chNot(),tr=chTr(),sh=chSh(),fl=chFlat();
   $('chkey').textContent='Tono probable: '+keyName(p.chkey,nt,tr,fl)+(chCapo()?' · Capo en el traste '+chCapo()+' (los nombres son las formas que tocás)':'')+(p.chinfo?' · '+p.chinfo:'');
   $('chl').innerHTML=p.chords.filter(g=>g.c!=='N').map((g,i)=>'<button type="button" data-t="'+g.s+'" title="Ir a '+mmss(g.s)+'">'+X(chordName(g.c,nt,sh,fl))+'<small>'+mmss(g.s)+'</small></button>').join('');
   const dur={};p.chords.forEach(g=>{if(g.c!=='N')dur[g.c]=(dur[g.c]||0)+(g.e-g.s)});
@@ -2951,9 +3017,12 @@ function chRender(){
 }
 /* recalcula los tiempos de los acordes cargados con los tiempos actuales de la letra */
 function chRefresh(){
-  const p=PR.cur&&PR.list[PR.cur];if(!p||!Array.isArray(p.chA)||!p.chA.length)return;
-  const b=chBuild(L,p.chA);p.chords=b.segs;p.chkey=keyFromChords(b.segs);p.chmiss=b.miss;
+  const p=PR.cur&&PR.list[PR.cur];if(!p)return;
+  if(Array.isArray(p.chB)&&p.chB.length){const b=chBuildBars(L,p.chB,isFinite(a.duration)?a.duration:0);p.chords=b.segs;p.chmiss=b.miss;if(!p.chkeyF)p.chkey=keyFromChords(b.segs);return}
+  if(!Array.isArray(p.chA)||!p.chA.length)return;
+  const b=chBuild(L,p.chA);p.chords=b.segs;if(!p.chkeyF)p.chkey=keyFromChords(b.segs);p.chmiss=b.miss;
 }
+const chKeyFrom=k=>{const c=k&&parseChord(/^[a-g]/.test(k)?k[0].toUpperCase()+k.slice(1):k);if(!c)return null;const m=/^([A-G]#?)(.*)$/.exec(c);return{r:CH_SHARP.indexOf(m[1]),mode:/^m(?!aj)/.test(m[2])?'min':'maj'}};
 async function chReadFile(f){
   const buf=await f.arrayBuffer();
   try{return new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(e){return new TextDecoder('windows-1252').decode(buf)}
@@ -2963,15 +3032,27 @@ $('chfile').onchange=async e=>{
   if(!PR.cur||!L.length){$('chst').textContent='Primero cargá (y sincronizá) la letra de este proyecto.';return}
   try{
     const entries=parseChordSheet(await chReadFile(f));
-    const r=chAnchors(L,entries);
-    if(!entries.some(x=>x.chords&&x.chords.length)){$('chst').textContent='No encontré acordes en ese archivo. Tienen que estar arriba de la letra o entre corchetes, como [Am].';return}
-    if(!r.anchors.length){$('chst').textContent='Encontré acordes, pero no pude ubicar las líneas del archivo en la letra de este proyecto. ¿Es la misma canción?';return}
-    const b=chBuild(L,r.anchors);
-    if(!b.segs.length){$('chst').textContent='Ubiqué los acordes, pero la letra todavía no tiene tiempos: sincronizala y volvé a cargar el archivo.';return}
-    const pj=PR.list[PR.cur];pj.chA=r.anchors;pj.chords=b.segs;pj.chkey=keyFromChords(b.segs);pj.chfile=f.name;pj.chmiss=b.miss;
+    if(!entries.some(x=>x.chords&&x.chords.length)){$('chst').textContent='No encontré acordes en ese archivo. Tienen que estar arriba de la letra, entre corchetes como [Am], o en compases como | Am | G |.';return}
+    const meta=entries.find(x=>x.type==='meta'&&(x.capo!=null||x.key))||{},fk=chKeyFrom(meta.key);
+    const r=chAnchors(L,entries),pj=PR.list[PR.cur];let msg='',segs;
+    if(r.stats.matched>0||!r.stats.gap&&r.anchors.length){
+      const b=chBuild(L,r.anchors);
+      if(!b.segs.length){$('chst').textContent='Ubiqué los acordes, pero la letra todavía no tiene tiempos: sincronizala y volvé a cargar el archivo.';return}
+      segs=b.segs;pj.chA=r.anchors;delete pj.chB;pj.chmiss=b.miss;
+      const s=r.stats;msg=s.matched+' de '+s.lyricLines+' líneas del archivo ubicadas'+(s.copied?' · '+s.copied+' repetidas copiadas':'')+(b.miss?' · '+b.miss+' acordes sin tiempo (líneas sin sincronizar)':'')+(b.skipGap?' · '+b.skipGap+' de intro/puente sin hueco para ubicarlos':'');
+    }else{
+      /* el archivo no trae letra: solo la progresión por compases y secciones */
+      const sb=chBarsFromEntries(entries);
+      if(sb.bars.length<4){$('chst').textContent='Encontré acordes, pero no pude ubicarlos: el archivo no trae la letra ni compases con secciones. ¿Es la misma canción?';return}
+      const b=chBuildBars(L,sb.bars,isFinite(a.duration)?a.duration:0);
+      if(!b.segs.length){$('chst').textContent='La letra todavía no tiene tiempos: sincronizala primero y volvé a cargar el archivo.';return}
+      segs=b.segs;pj.chB=sb.bars;delete pj.chA;pj.chmiss=0;
+      msg='archivo sin letra: '+sb.bars.length+' compases repartidos según los tiempos de tu letra (largo de compás ≈ '+b.info.T.toFixed(1)+' s, '+b.info.snapped+' de '+b.info.passes+' secciones cantadas alineadas)';
+    }
+    pj.chords=segs;pj.chfile=f.name;pj.chkeyF=!!fk;pj.chkey=fk||keyFromChords(segs);
+    if(meta.capo!=null&&meta.capo>=0&&meta.capo<=9)pj.capo=meta.capo;
     pj.chinfo='del archivo «'+f.name+'»';savePR();chRender();chCur=-2;
-    const s=r.stats;
-    $('chst').textContent='Listo: '+b.segs.length+' cambios de acorde · '+s.matched+' de '+s.lyricLines+' líneas del archivo ubicadas'+(s.copied?' · '+s.copied+' repetidas copiadas':'')+(b.miss?' · '+b.miss+' acordes sin tiempo (líneas sin sincronizar)':'')+(b.skipGap?' · '+b.skipGap+' de intro/puente sin hueco para ubicarlos':'')+'.';
+    $('chst').textContent='Listo: '+segs.length+' cambios de acorde · '+msg+(meta.capo?' · capo '+meta.capo+' tomado del archivo':'')+'.';
     $('chd').open=true;
   }catch(err){$('chst').textContent='No se pudo leer el archivo: '+err.message}
 };
@@ -2999,7 +3080,7 @@ $('chdl').onclick=()=>{
   x.href=u;x.download=((PR.cur&&PR.list[PR.cur].name)||'letra')+' (acordes).txt';document.body.appendChild(x);x.click();x.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);
 };
 $('chcp').onclick=async()=>{const t=chText();if(!t)return;try{await navigator.clipboard.writeText(t);note('Letra con acordes copiada.')}catch(e){note('No se pudo copiar: descargala como .txt.')}};
-$('chclr').onclick=()=>{const p=PR.list[PR.cur];if(!p)return;delete p.chords;delete p.chkey;delete p.chinfo;delete p.chA;delete p.chfile;delete p.chmiss;savePR();chRender();$('chst').textContent='';chCur=-2};
+$('chclr').onclick=()=>{const p=PR.list[PR.cur];if(!p)return;delete p.chords;delete p.chkey;delete p.chinfo;delete p.chA;delete p.chB;delete p.chkeyF;delete p.chfile;delete p.chmiss;savePR();chRender();$('chst').textContent='';chCur=-2};
 /* en la vista previa: acorde actual y el siguiente */
 function kpChord(t){
   if(!$('kpc').checked)return;
