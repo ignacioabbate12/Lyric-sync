@@ -1513,7 +1513,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.39',PK='lyricsync_projects';
+const APP_VERSION='3.40',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3655,8 +3655,19 @@ if(!RMT_REMOTE){
   };
   $('rmg').onclick=async()=>{
     try{
-      rmtPcClose();$('rmg').disabled=true;rmtStat('Generando código…');
+      rmtPcClose();$('rmg').disabled=true;
+      /* Chrome oculta la IP real de la computadora (usa un nombre .local que el celular no siempre resuelve) salvo que se haya dado permiso de micrófono: se pide solo para destapar la IP y se suelta enseguida */
+      if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+        rmtStat('Si el navegador pide permiso de micrófono, aceptalo: no se graba nada, solo sirve para que el celular encuentre la computadora.');
+        try{const ms=await Promise.race([navigator.mediaDevices.getUserMedia({audio:true}),new Promise((_,j)=>setTimeout(j,12000))]);ms.getTracks().forEach(t=>t.stop())}catch(e){}
+      }
+      rmtStat('Generando código…');
       const pc=new RTCPeerConnection(rtcIce($('rmst').checked));rmt.pc=pc;
+      let tmo=0;
+      pc.oniceconnectionstatechange=()=>{const st=pc.iceConnectionState;
+        if(st==='checking'){clearTimeout(tmo);tmo=setTimeout(()=>{if(pc.iceConnectionState!=='connected'&&pc.iceConnectionState!=='completed')rmtStat('No logra conectar (estado: '+pc.iceConnectionState+'). Probá activar el servidor STUN, o que el router no tenga «aislamiento de clientes» / red de invitados.')},20000)}
+        else if(st==='connected'||st==='completed')clearTimeout(tmo);
+        else if(st==='failed')rmtStat('Falló la conexión. Probá activar el servidor STUN y repetir desde «Generar código».')};
       rmt.dc=pc.createDataChannel('ls');rmtWire(rmt.dc,true);
       pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed')rmtStat('No se pudo conectar. Probá con el servidor STUN o con ambos en la misma red Wi-Fi.')};
       await pc.setLocalDescription(await pc.createOffer());await rtcWait(pc);
