@@ -223,9 +223,26 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 
 #kbi,#kbi2{display:none;position:absolute;left:-25%;top:-25%;width:150%;height:150%;z-index:0;pointer-events:none;will-change:transform}
 #kbi2{opacity:.5}
-#kp.cvbg #kbi,#kp.cvbg #kbi2{display:block}#kp.cvbg #kbg{display:none}
-#kp.cvbg.anim #kbi{animation:kbis 22s ease-in-out infinite alternate}
-#kp.cvbg.anim #kbi2{animation:kbis2 31s ease-in-out infinite alternate}
+#kp.cvbg #kbi{display:block}#kp.cvbg #kbi2{display:none}
+#kp.cvbg.anim #kbi{animation:kbis 40s ease-in-out infinite alternate}
+/* manchas de color de la portada que vagan en cualquier dirección sobre el fondo difuminado */
+#kp.cvbg.cvbg.cvbg #kbg i{display:block;position:absolute;left:auto;right:auto;top:auto;bottom:auto;margin:0;rotate:none;width:72vmax;height:72vmax;border-radius:50%;filter:none;opacity:1}
+#kp.cvbg.cvbg.cvbg #kbg i:nth-child(1){left:-12%;top:-18%;background:radial-gradient(circle,rgba(var(--c1),.9),rgba(var(--c1),.5) 38%,rgba(var(--c1),0) 70%)}
+#kp.cvbg.cvbg.cvbg #kbg i:nth-child(2){left:48%;top:-24%;background:radial-gradient(circle,rgba(var(--c2),.85),rgba(var(--c2),.45) 38%,rgba(var(--c2),0) 70%)}
+#kp.cvbg.cvbg.cvbg #kbg i:nth-child(3){left:30%;top:42%;background:radial-gradient(circle,rgba(var(--c3),.85),rgba(var(--c3),.45) 38%,rgba(var(--c3),0) 70%)}
+#kp.cvbg.cvbg.cvbg #kbg i:nth-child(4){left:-20%;top:50%;background:radial-gradient(circle,rgba(var(--c2),.8),rgba(var(--c2),.4) 38%,rgba(var(--c2),0) 70%)}
+#kp.cvbg.cvbg.cvbg #kbg i:nth-child(5){left:60%;top:48%;background:radial-gradient(circle,rgba(var(--c1),.8),rgba(var(--c1),.4) 38%,rgba(var(--c1),0) 70%)}
+#kp.anim.cvbg.cvbg.cvbg #kbg i{animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-direction:normal;animation-delay:0s}
+#kp.anim.cvbg.cvbg.cvbg #kbg i:nth-child(1){animation-name:kw1;animation-duration:36s}
+#kp.anim.cvbg.cvbg.cvbg #kbg i:nth-child(2){animation-name:kw2;animation-duration:43s}
+#kp.anim.cvbg.cvbg.cvbg #kbg i:nth-child(3){animation-name:kw3;animation-duration:31s}
+#kp.anim.cvbg.cvbg.cvbg #kbg i:nth-child(4){animation-name:kw4;animation-duration:47s}
+#kp.anim.cvbg.cvbg.cvbg #kbg i:nth-child(5){animation-name:kw5;animation-duration:39s}
+@keyframes kw1{0%,100%{transform:translate3d(0,0,0) scale(1)}22%{transform:translate3d(46vmax,16vmax,0) scale(1.3)}48%{transform:translate3d(-8vmax,44vmax,0) scale(.9)}74%{transform:translate3d(34vmax,-20vmax,0) scale(1.25)}}
+@keyframes kw2{0%,100%{transform:translate3d(0,0,0) scale(1.1)}25%{transform:translate3d(-44vmax,26vmax,0) scale(.9)}52%{transform:translate3d(-16vmax,-14vmax,0) scale(1.35)}78%{transform:translate3d(18vmax,36vmax,0) scale(1)}}
+@keyframes kw3{0%,100%{transform:translate3d(0,0,0) scale(1)}20%{transform:translate3d(-38vmax,-30vmax,0) scale(1.3)}45%{transform:translate3d(30vmax,-26vmax,0) scale(.85)}72%{transform:translate3d(-20vmax,20vmax,0) scale(1.2)}}
+@keyframes kw4{0%,100%{transform:translate3d(0,0,0) scale(1.2)}28%{transform:translate3d(42vmax,-34vmax,0) scale(.9)}55%{transform:translate3d(60vmax,12vmax,0) scale(1.3)}80%{transform:translate3d(14vmax,-46vmax,0) scale(1)}}
+@keyframes kw5{0%,100%{transform:translate3d(0,0,0) scale(.95)}24%{transform:translate3d(-50vmax,-16vmax,0) scale(1.3)}50%{transform:translate3d(-24vmax,30vmax,0) scale(1.05)}76%{transform:translate3d(-60vmax,-40vmax,0) scale(1.25)}}
 @keyframes kbis{from{transform:translate3d(-5%,-3%,0) rotate(-8deg) scale(1.05)}to{transform:translate3d(5%,4%,0) rotate(10deg) scale(1.3)}}
 @keyframes kbis2{from{transform:translate3d(6%,4%,0) rotate(14deg) scale(1.35)}to{transform:translate3d(-6%,-5%,0) rotate(-12deg) scale(1.08)}}
 #kcv{display:none;position:absolute;z-index:1;left:8vw;top:50%;transform:translateY(-52%);width:min(32vw,56vh);flex-direction:column;gap:14px;pointer-events:none}
@@ -597,7 +614,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <div id="kthm" hidden role="dialog" aria-label="Colores del fondo"></div>
   <div id="kfm" hidden role="dialog" aria-label="Tipografía y tamaño"></div>
   <div id="kbg" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-  <canvas id="kbi" width="64" height="64" aria-hidden="true"></canvas><canvas id="kbi2" width="64" height="64" aria-hidden="true"></canvas>
+  <canvas id="kbi" width="24" height="24" aria-hidden="true"></canvas><canvas id="kbi2" width="24" height="24" aria-hidden="true"></canvas>
   <div id="kcv"><img id="kcvi" alt=""><div class="kcb"><span id="kcb1">0:00</span><div id="kcbg" role="slider" aria-label="Posición" tabindex="-1"><i id="kcbi"></i></div><span id="kcb2">0:00</span></div><b id="kcvt"></b><span id="kcva"></span></div>
   <div id="kcp" hidden role="dialog" aria-label="Portada"></div>
   <div class="kpt"><b id="kpn"></b><span class="sep"></span>
@@ -1585,7 +1602,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.49',PK='lyricsync_projects';
+const APP_VERSION='3.50',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3661,7 +3678,7 @@ function covColors(img){
 }
 function covDraw(img){
   const cv=$('kbi'),x=cv.getContext('2d'),W=cv.width,H=cv.height,r=Math.max(W/img.naturalWidth,H/img.naturalHeight)*1.15,w=img.naturalWidth*r,h=img.naturalHeight*r;
-  x.clearRect(0,0,W,H);try{x.filter='blur(3px) saturate(1.7) brightness(.75)'}catch(e){}x.drawImage(img,(W-w)/2,(H-h)/2,w,h);x.filter='none';
+  x.clearRect(0,0,W,H);try{x.filter='blur(2px) saturate(1.8) brightness(.7)'}catch(e){}x.drawImage(img,(W-w)/2,(H-h)/2,w,h);x.filter='none';
   x.fillStyle='rgba(0,0,0,.28)';x.fillRect(0,0,W,H);
   const c2=$('kbi2'),y=c2.getContext('2d');y.clearRect(0,0,W,H);y.save();y.translate(W/2,H/2);y.rotate(Math.PI*.75);y.translate(-W/2,-H/2);
   try{y.filter='blur(5px) saturate(1.9) brightness(.85)'}catch(e){}y.drawImage(img,(W-w)/2,(H-h)/2,w,h);y.restore();
@@ -3672,7 +3689,9 @@ function kcvApply(){
   const bg=has&&!!m.kpcb;el.classList.toggle('cvbg',bg);
   $('kcvt').textContent=(PR.cur&&PR.list[PR.cur]&&PR.list[PR.cur].name)||'';
   const ar=(m.kart||{})[artKey(PR.cur)]||'';$('kcva').textContent=ar;if($('kca')&&document.activeElement!==$('kca'))$('kca').value=ar;
-  if(bg&&kcvCols)el.style.setProperty('--fbg',kcvCols[0].map(v=>Math.round(v*.22)+6).join(','));else el.style.removeProperty('--fbg');
+  if(bg&&kcvCols){el.style.setProperty('--fbg',kcvCols[0].map(v=>Math.round(v*.22)+6).join(','));kcvCols.forEach((c,i)=>el.style.setProperty('--c'+(i+1),c.join(',')))}
+  else{el.style.removeProperty('--fbg');if(el._cvt){el._cvt=0;try{kpTheme(getMeta().kpth)}catch(e){}}}
+  el._cvt=bg&&kcvCols?1:0;
   if($('kcs')){$('kcs').checked=m.kpcs!==false;$('kcb').checked=!!m.kpcb;$('kcx').disabled=!has}
 }
 /* Álbumes: etiqueta por proyecto; los proyectos del mismo álbum comparten portada y artista */
