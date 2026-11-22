@@ -494,7 +494,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <div class="row"><button id="rmw" class="pri">Abrir ventana de control</button><span id="rms" class="mu" role="status"></span></div>
   <h3 style="margin:16px 0 4px;font-size:15px">Celular (sin servidor, por Wi-Fi)</h3>
   <ol style="font-size:13.5px"><li>En el celular abrí esta misma app (el mismo archivo o la misma dirección) con <b>#remote</b> al final, o usá el enlace de abajo si la app está en una dirección web.</li><li>Tocá <b>Generar código</b> acá, copiá el código y pegalo en el celular.</li><li>El celular te muestra un código de respuesta: pegalo acá y tocá <b>Conectar</b>.</li></ol>
-  <div class="row"><button id="rmg">Generar código</button><label><input type="checkbox" id="rmst"> Usar servidor STUN público de Google (para redes distintas)</label></div>
+  <div class="row"><button id="rmg">Generar código</button><label><input type="checkbox" id="rmnt" checked> Conexión automática con un solo escaneo (usa ntfy.sh)</label><label><input type="checkbox" id="rmst"> Usar servidor STUN público de Google (para redes distintas)</label></div>
   <div id="rmq" hidden style="margin:10px 0;line-height:0"></div>
   <textarea id="rmo" readonly placeholder="Código para el celular" aria-label="Código para el celular" hidden></textarea>
   <div class="row" id="rmor" hidden><button id="rmc">Copiar código</button><button id="rml">Copiar enlace</button></div>
@@ -1514,7 +1514,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.42',PK='lyricsync_projects';
+const APP_VERSION='3.43',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3671,7 +3671,24 @@ function rtcDec(code){
   (c?c.split(';'):[]).forEach((x,i)=>{const [ip,port,ty]=x.split(',');lines.push('a=candidate:'+(i+1)+' 1 udp '+((ty==='h'?2122260223:1686052607)-i)+' '+ip+' '+port+' typ '+(ty==='h'?'host':'srflx raddr 0.0.0.0 rport 0'))});
   return{type:t==='o'?'offer':'answer',sdp:lines.join('\r\n')+'\r\n'};
 }
-const rmtQrShow=(el,text)=>{try{el.innerHTML=QR.svg(text,260);el.hidden=false}catch(e){el.innerHTML='';el.hidden=true}};
+/* Conexión con un solo escaneo: el celular deja su respuesta en un canal público temporal de ntfy.sh (nombre aleatorio) y la computadora la recoge */
+const RMT_RELAY='https://ntfy.sh';
+const rmtTopic=()=>'ls'+[...crypto.getRandomValues(new Uint8Array(12))].map(b=>('0'+b.toString(16)).slice(-2)).join('');
+function rmtSplit(t){
+  t=String(t).trim();let topic='';
+  const u=/[#&]t=([A-Za-z0-9]+)/.exec(t);if(u){topic=u[1];t=t.replace(/[#&]t=[A-Za-z0-9]+/,'')}
+  else{const m=/^(LS1[A-Za-z0-9_-]+)\.(ls[0-9a-f]{24})$/.exec(t);if(m){t=m[1];topic=m[2]}}
+  return{code:t,topic};
+}
+let rmtES=null;
+function rmtListen(topic){
+  rmtUnlisten();if(!topic||!window.EventSource)return;
+  const es=new EventSource(RMT_RELAY+'/'+topic+'/sse');rmtES=es;
+  es.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}
+    if(m&&m.event==='message'&&m.message&&rmt.pc&&rmt.pc.signalingState==='have-local-offer'){rmtUnlisten();$('rma').value=m.message;$('rmk').click()}};
+}
+function rmtUnlisten(){if(rmtES){try{rmtES.close()}catch(e){}rmtES=null}}
+let rmtQrText='';const rmtQrShow=(el,text)=>{rmtQrText=text;try{el.innerHTML=QR.svg(text,260);el.hidden=false}catch(e){el.innerHTML='';el.hidden=true}};
 /* Escáner de QR con la cámara (solo donde el navegador tiene BarcodeDetector) */
 const qrCanScan=()=>('BarcodeDetector' in window)&&!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
 async function qrScan(onText){
@@ -3755,7 +3772,7 @@ if(!RMT_REMOTE){
   };
   $('rmg').onclick=async()=>{
     try{
-      rmtPcClose();$('rmg').disabled=true;
+      rmtPcClose();rmtUnlisten();$('rmg').disabled=true;
       /* Chrome oculta la IP real de la computadora (usa un nombre .local que el celular no siempre resuelve) salvo que se haya dado permiso de micrófono: se pide solo para destapar la IP y se suelta enseguida */
       if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
         rmtStat('Si el navegador pide permiso de micrófono, aceptalo: no se graba nada, solo sirve para que el celular encuentre la computadora.');
@@ -3772,7 +3789,9 @@ if(!RMT_REMOTE){
       pc.onconnectionstatechange=()=>{if(pc.connectionState==='failed')rmtStat('No se pudo conectar. Probá con el servidor STUN o con ambos en la misma red Wi-Fi.')};
       await pc.setLocalDescription(await pc.createOffer());await rtcWait(pc);
       const code=rtcEnc(pc.localDescription);
-      $('rmo').value=code;rmtQrShow($('rmq'),/^https?:/.test(location.protocol)?location.href.split('#')[0]+'#remote='+code:code);$('rmo').hidden=$('rmor').hidden=$('rma').hidden=$('rmar').hidden=false;
+      const topic=$('rmnt').checked?rmtTopic():'';
+      $('rmo').value=code;rmtQrShow($('rmq'),/^https?:/.test(location.protocol)?location.href.split('#')[0]+'#remote='+code+(topic?'&t='+topic:''):code+(topic?'.'+topic:''));
+      rmtListen(topic);$('rmo').hidden=$('rmor').hidden=$('rma').hidden=$('rmar').hidden=false;
       rmtStat('Copiá el código en el celular y pegá acá la respuesta.');
     }catch(err){rmtStat('Este navegador no permite crear la conexión: '+(err&&err.message||err))}
     $('rmg').disabled=false;
@@ -3839,15 +3858,18 @@ if(RMT_REMOTE){
     try{
       rmtPcClose();const pc=new RTCPeerConnection(rtcIce(false));rmt.pc=pc;
       pc.ondatachannel=e=>{rmt.dc=e.channel;rmtWire(rmt.dc,false)};
-      await pc.setRemoteDescription(rtcDec($('rof').value));
+      const sp=rmtSplit($('rof').value);relayTopic=sp.topic;
+      await pc.setRemoteDescription(rtcDec(sp.code));
       await pc.setLocalDescription(await pc.createAnswer());await rtcWait(pc);
       const ac=rtcEnc(pc.localDescription);$('rar').value=ac;$('rar').hidden=$('rcc').hidden=false;rmtQrShow($('rrq'),ac);$('rrh').hidden=false;
+      if(relayTopic){try{const r=await fetch(RMT_RELAY+'/'+relayTopic,{method:'POST',body:ac});if(r.ok){$('rrh').textContent='Respuesta enviada: conectando con la computadora…';$('rrq').hidden=true}}catch(e){}}
     }catch(err){$('rar').value='Código no válido o conexión no permitida: '+(err&&err.message||err);$('rar').hidden=false}
   };
   if(qrCanScan())$('rsc').hidden=false;$('rsc').onclick=()=>qrScan(t=>{$('rof').value=t;$('rgr').click()});
+  let relayTopic='';
   $('rcc').onclick=async()=>{try{await navigator.clipboard.writeText($('rar').value)}catch(e){$('rar').select()}};
   const m=/[#&]remote=([^&]+)/.exec(location.hash);
-  if(m){$('rcd').open=true;$('rof').value=decodeURIComponent(m[1]);setTimeout(()=>$('rgr').click(),50)}
+  if(m){$('rcd').open=true;const tp=/[#&]t=([A-Za-z0-9]+)/.exec(location.hash);$('rof').value=decodeURIComponent(m[1])+(tp?'.'+tp[1]:'');setTimeout(()=>$('rgr').click(),50)}
 }
 </script>
 </body></html>
