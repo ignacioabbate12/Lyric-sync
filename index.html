@@ -133,7 +133,7 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 .meta .mu{font-size:12px;align-self:center;margin-left:8px}
 #av{margin-top:8px;max-height:260px;overflow:auto}
 #av .tr{display:block;width:100%;text-align:left;border-radius:10px;margin:3px 0;font-size:14px}
-#pjs{min-width:200px}
+#pjs{min-width:200px}.alb{font-size:12px;font-weight:600;padding:1px 8px;border-radius:99px;background:color-mix(in srgb,var(--ac) 22%,transparent);margin-left:6px;white-space:nowrap}
 .mono{font:12.5px ui-monospace,Menlo,Consolas,monospace}
 .grp{display:inline-flex;align-items:center;gap:4px}
 .grp button{padding:.15em .6em;font-size:12px;border-radius:8px}
@@ -469,6 +469,7 @@ dialog p{margin:6px 0;color:var(--mu)}
 <details open id="pj"><summary>Proyectos</summary>
   <div class="row"><button id="kjo" class="pri" title="Abre un reproductor de karaoke con tus proyectos que tengan audio y letra sincronizada: elige uno al azar y pasa solo a la siguiente">🎤 Reproductor karaoke</button><button id="kjc" title="Abre el reproductor empezando por el proyecto elegido arriba">Reproducir este proyecto</button><span class="mu">Solo se reproduce: no se edita nada. Al salir volvés acá.</span></div>
   <div class="row"><select id="pjs" aria-label="Proyecto"></select><button id="pjnew">Nuevo</button><button id="pjdup">Duplicar</button><button id="pjren">Renombrar</button><button id="pjdel">Borrar</button><button id="audx" title="Quita el audio guardado de este proyecto (la letra y los tiempos no se tocan)">Quitar audio</button><button id="bkx" title="Guarda todos tus proyectos en un archivo (sin los audios)">Exportar respaldo</button><label class="btn" title="Recupera proyectos desde un respaldo">Importar respaldo<input id="bki" type="file" accept=".json,application/json" hidden></label><button id="ins" class="pri" hidden>Instalar como app</button></div>
+  <div class="row"><label>Álbum <input id="pjal" type="text" list="pjall" maxlength="60" placeholder="Etiqueta de álbum (opcional)" style="min-width:230px"></label><datalist id="pjall"></datalist><button id="pjalx" title="Quitar la etiqueta de álbum de este proyecto">Quitar álbum</button><label class="btn" title="La portada se guarda en el álbum: todos sus proyectos la comparten">🖼 Portada<input id="pjcf" type="file" accept="image/*" hidden></label></div>
   <p id="pjinfo" class="mu" style="margin:8px 0 0"></p>
 </details>
 <details open><summary>Letra e importación</summary>
@@ -1584,7 +1585,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.48',PK='lyricsync_projects';
+const APP_VERSION='3.49',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -1850,6 +1851,7 @@ function pjUI(){
   const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
   $('pjs').innerHTML=ids.map(id=>'<option value="'+id+'"'+(id===PR.cur?' selected':'')+'>'+X(PR.list[id].name)+'</option>').join('');
   const p=PR.list[PR.cur];
+  try{albUI()}catch(e){}
   $('cn').textContent=p?p.name:'Elegir proyecto';
   if($('ausl'))$('ausl').hidden=$('aukar').hidden=$('auvv').hidden=$('aukd').hidden=$('auvd').hidden=!((p&&p.vsv)||$('ausep').checked);
   $('pjinfo').textContent=(p&&p.audio?(p.asv?'Audio guardado con este proyecto: '+p.audio+(p.asz?' ('+(p.asz/1048576).toFixed(1)+' MB)':'')+'. Se carga solo al abrirlo.':'Este proyecto usaba «'+p.audio+'», pero no quedó guardado: volvé a cargarlo con «Cargar audio».'):'Este proyecto todavía no tiene audio: cargalo con «Cargar audio» y queda guardado con el proyecto.')+' Último respaldo: '+(getMeta().last?new Date(getMeta().last).toLocaleDateString('es'):'nunca')+'.';
@@ -1863,6 +1865,9 @@ function openProj(id,noSave){
   try{$('chst').textContent='';chCur=-2;chRender()}catch(e){}
 }
 $('pjs').onchange=()=>{openProj($('pjs').value);$('pjs').blur()};
+$('pjal').onchange=()=>setAlbum($('pjal').value);
+$('pjalx').onclick=()=>{$('pjal').value='';setAlbum('')};
+$('pjcf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)kcvSet(f)};
 $('pjnew').onclick=()=>{const n=prompt('Nombre del proyecto nuevo','Canción nueva');if(n==null)return;openProj(newProj(n.trim()||'Sin título'));unloadAudio();pjUI()};
 $('pjdup').onclick=async()=>{
   save();const old=PR.cur,p=PR.list[old],nid=newProj(p.name+' (copia)',Object.assign(JSON.parse(JSON.stringify(p)),{name:p.name+' (copia)'}));
@@ -3322,7 +3327,7 @@ function pkRender(){
   ids.forEach((id,i)=>{
     const p=PR.list[id],Lp=p.L||[],nw=Lp.reduce((n,l)=>n+l.w.length,0),nt=Lp.reduce((n,l)=>n+l.w.filter(x=>x.s!=null).length,0),pct=nw?Math.round(nt/nw*100):0;
     const d=document.createElement('div');d.className='pc';
-    d.innerHTML='<button class="pco" data-id="'+id+'"><span class="nm">'+X(p.name)+(i===0?' · último usado':'')+'</span><span class="m2">'+Lp.length+' líneas · '+pct+'% con tiempo · '+new Date(p.upd).toLocaleString('es',{dateStyle:'medium',timeStyle:'short'})+(p.audio?' · '+X(p.audio)+(p.asv?' (guardado)':''):'')+'</span><span class="b2"><i style="width:'+pct+'%"></i></span></button><button class="pcd" data-id="'+id+'" title="Borrar proyecto" aria-label="Borrar proyecto">✕</button>';
+    d.innerHTML='<button class="pco" data-id="'+id+'"><span class="nm">'+X(p.name)+(p.album?' <span class="alb">💿 '+X(p.album)+'</span>':'')+(i===0?' · último usado':'')+'</span><span class="m2">'+Lp.length+' líneas · '+pct+'% con tiempo · '+new Date(p.upd).toLocaleString('es',{dateStyle:'medium',timeStyle:'short'})+(p.audio?' · '+X(p.audio)+(p.asv?' (guardado)':''):'')+'</span><span class="b2"><i style="width:'+pct+'%"></i></span></button><button class="pcd" data-id="'+id+'" title="Borrar proyecto" aria-label="Borrar proyecto">✕</button>';
     box.appendChild(d);
   });
   $('pkx').hidden=!PR.cur;
@@ -3666,14 +3671,40 @@ function kcvApply(){
   el.classList.toggle('cov',has&&m.kpcs!==false);
   const bg=has&&!!m.kpcb;el.classList.toggle('cvbg',bg);
   $('kcvt').textContent=(PR.cur&&PR.list[PR.cur]&&PR.list[PR.cur].name)||'';
-  const ar=(m.kart||{})[PR.cur]||'';$('kcva').textContent=ar;if($('kca')&&document.activeElement!==$('kca'))$('kca').value=ar;
+  const ar=(m.kart||{})[artKey(PR.cur)]||'';$('kcva').textContent=ar;if($('kca')&&document.activeElement!==$('kca'))$('kca').value=ar;
   if(bg&&kcvCols)el.style.setProperty('--fbg',kcvCols[0].map(v=>Math.round(v*.22)+6).join(','));else el.style.removeProperty('--fbg');
   if($('kcs')){$('kcs').checked=m.kpcs!==false;$('kcb').checked=!!m.kpcb;$('kcx').disabled=!has}
+}
+/* Álbumes: etiqueta por proyecto; los proyectos del mismo álbum comparten portada y artista */
+const albKey=n=>String(n||'').trim().toLowerCase();
+const projAlbum=id=>{const p=PR.list[id];return p&&p.album?String(p.album).trim():''};
+const coverKey=id=>projAlbum(id)?'cover:album:'+albKey(projAlbum(id)):'cover:'+id;
+const artKey=id=>projAlbum(id)?'album:'+albKey(projAlbum(id)):id;
+function albUI(){
+  const el=$('pjal');if(!el)return;
+  if(document.activeElement!==el)el.value=projAlbum(PR.cur);
+  const names=[...new Set(Object.values(PR.list).map(p=>p&&p.album?String(p.album).trim():'').filter(Boolean))].sort();
+  $('pjall').innerHTML=names.map(n=>'<option value="'+X(n)+'">').join('');
+  $('pjalx').disabled=!projAlbum(PR.cur);
+  if($('kcal')&&document.activeElement!==$('kcal'))$('kcal').value=projAlbum(PR.cur);
+}
+async function setAlbum(name){
+  const id=PR.cur,p=id&&PR.list[id];if(!p)return;name=String(name||'').trim().slice(0,60);
+  if((p.album||'')===name){albUI();return}
+  const old=coverKey(id);
+  if(name)p.album=name;else delete p.album;
+  const nk=coverKey(id);
+  try{ // si el proyecto ya tenía portada y el álbum no, el álbum la hereda
+    if(name&&nk!==old){const have=await adbGet(nk);if(!have){const own=await adbGet(old);if(own)await adbSet(nk,own)}}
+  }catch(e){}
+  savePR();pjUI();try{pkRender&&0}catch(e){}
+  kcvFor=null;await kpCover();rmtPush(true);
+  note(name?'Álbum «'+name+'»: este proyecto comparte portada con los demás de ese álbum.':'Proyecto sin álbum.');
 }
 async function kpCover(){
   const id=PR.cur;if(kcvBusy)return;kcvBusy=true;
   try{
-    let blob=null;try{blob=id?await adbGet('cover:'+id):null}catch(e){}
+    let blob=null;try{blob=id?await adbGet(coverKey(id)):null;if(!blob&&id&&projAlbum(id))blob=await adbGet('cover:'+id)}catch(e){}
     if(kcvURL){URL.revokeObjectURL(kcvURL);kcvURL=''}
     kcvFor=id;kcvCols=null;kcvThumb='';
     if(blob){
@@ -3690,7 +3721,7 @@ async function kcvSet(file){
   if(!PR.cur||!PR.list[PR.cur]){note('Abrí primero un proyecto para ponerle portada.');return}
   try{
     const bm=await createImageBitmap(file),r=Math.min(1,720/Math.max(bm.width,bm.height)),c=document.createElement('canvas');c.width=Math.round(bm.width*r);c.height=Math.round(bm.height*r);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);
-    const blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.9));await adbSet('cover:'+PR.cur,blob);await kpCover();note('Portada guardada en este proyecto.');
+    const blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.9));await adbSet(coverKey(PR.cur),blob);await kpCover();rmtPush(true);note(projAlbum(PR.cur)?'Portada guardada en el álbum «'+projAlbum(PR.cur)+'»: la comparten todos sus proyectos.':'Portada guardada en este proyecto.');
   }catch(e){note('No pude leer esa imagen.')}
 }
 (function(){
@@ -3698,18 +3729,19 @@ async function kcvSet(file){
   m.innerHTML='<label class="btn">🖼 Elegir imagen…<input id="kcf" type="file" accept="image/*" hidden></label>'
    +'<label class="ck"><input type="checkbox" id="kcs"> Mostrar la portada junto a la letra</label>'
    +'<label class="ck"><input type="checkbox" id="kcb"> Fondo con los colores de la portada, muy difuminado</label>'
-   +'<input type="text" id="kca" maxlength="80" placeholder="Artista (opcional)" aria-label="Artista" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:.5em .7em"><button type="button" class="rs" id="kcx">Quitar portada</button><p>La portada se guarda con este proyecto (en este navegador).</p>';
+   +'<input type="text" id="kcal" list="pjall" maxlength="60" placeholder="Álbum (opcional)" aria-label="Álbum" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:.5em .7em"><input type="text" id="kca" maxlength="80" placeholder="Artista (opcional)" aria-label="Artista" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:.5em .7em"><button type="button" class="rs" id="kcx">Quitar portada</button><p>La portada se guarda con este proyecto (en este navegador).</p>';
   $('kcf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)kcvSet(f)};
   $('kcs').onchange=()=>{setMeta({kpcs:$('kcs').checked});kcvApply();setTimeout(()=>{kpMeasure();kp.ft=0},60)};
   $('kcb').onchange=()=>{setMeta({kpcb:$('kcb').checked});kcvApply()};
-  $('kca').oninput=()=>{if(!PR.cur)return;const k=Object.assign({},getMeta().kart||{});k[PR.cur]=$('kca').value;setMeta({kart:k});$('kcva').textContent=$('kca').value};
+  $('kcal').onchange=()=>setAlbum($('kcal').value);
+  $('kca').oninput=()=>{if(!PR.cur)return;const k=Object.assign({},getMeta().kart||{});k[artKey(PR.cur)]=$('kca').value;setMeta({kart:k});$('kcva').textContent=$('kca').value};
   {const g=$('kcbg');let dn=false;
    const seek=e=>{const r=g.getBoundingClientRect(),d=kp.virt?kp.vdur:a.duration;if(!d||!isFinite(d)||r.width<=0)return;kpSeek(c01((e.clientX-r.left)/r.width)*d);kp.hold=0};
    g.addEventListener('pointerdown',e=>{dn=true;g.classList.add('dn');try{g.setPointerCapture(e.pointerId)}catch(x){}seek(e);e.preventDefault()});
    g.addEventListener('pointermove',e=>{if(dn)seek(e)});
    ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>g.addEventListener(ev,()=>{dn=false;g.classList.remove('dn')}));
    g.setAttribute('tabindex','0');g.addEventListener('keydown',e=>{const k=e.key==='ArrowRight'?5:e.key==='ArrowLeft'?-5:0;if(k){kpSeek(kpT()+k);e.preventDefault()}})}
-  $('kcx').onclick=async()=>{if(PR.cur){try{await adbDel('cover:'+PR.cur)}catch(e){}await kpCover();note('Portada quitada.')}};
+  $('kcx').onclick=async()=>{if(PR.cur){try{await adbDel(coverKey(PR.cur));await adbDel('cover:'+PR.cur)}catch(e){}await kpCover();rmtPush(true);note('Portada quitada.')}};
   $('kpcv').onclick=e=>{e.stopPropagation();m.hidden=!m.hidden;if(!m.hidden){$('kthm').hidden=true;$('kfm').hidden=true;kcvApply()}};
   $('kpth').addEventListener('click',()=>{if(!$('kthm').hidden)m.hidden=true});
   $('kpaa').addEventListener('click',()=>{if(!$('kfm').hidden)m.hidden=true});
@@ -3917,7 +3949,7 @@ function rmtState(full){
 function rmtExtras(){
   if(PR.cur!==kcvFor&&!kcvBusy&&PR.cur)kpCover().catch(()=>{});
   const ids=kjList();if(PR.cur&&PR.list[PR.cur]&&!ids.includes(PR.cur))ids.unshift(PR.cur);
-  return{lst:ids.filter(id=>PR.list[id]).map(id=>[id,PR.list[id].name||'Sin nombre',(PR.list[id].stm||0)>=2?1:0]),ck:PR.cur===kcvFor?(kcvFor+':'+kcvThumb.length):'',cv:PR.cur!==kcvFor||!kcvThumb?'':(rmt.ck===kcvFor+':'+kcvThumb.length?undefined:kcvThumb),cl:PR.cur===kcvFor&&kcvCols?kcvCols[0]:null,kj:!!kj.on}
+  return{lst:ids.filter(id=>PR.list[id]).map(id=>[id,PR.list[id].name||'Sin nombre',(PR.list[id].stm||0)>=2?1:0,projAlbum(id)]),ck:PR.cur===kcvFor?(kcvFor+':'+kcvThumb.length):'',cv:PR.cur!==kcvFor||!kcvThumb?'':(rmt.ck===kcvFor+':'+kcvThumb.length?undefined:kcvThumb),cl:PR.cur===kcvFor&&kcvCols?kcvCols[0]:null,kj:!!kj.on}
 }
 /* Anterior/siguiente como en Spotify: «anterior» vuelve al principio si ya pasaron 3 s, y si no, va a la canción anterior */
 function rmtSong(dir){
@@ -4050,7 +4082,7 @@ if(RMT_REMOTE){
   let lastLst='',curId='';
   const rlist=()=>{
     const q=($('rq').value||'').toLowerCase(),ls=ui._lst||[];
-    $('rls').innerHTML=ls.filter(x=>!q||x[1].toLowerCase().includes(q)).map(x=>'<button type="button" data-id="'+x[0]+'"'+(x[0]===curId?' aria-current="true"':'')+'><i>'+(x[0]===curId?'♪':'▶')+'</i><span>'+X(x[1])+'</span>'+(x[2]?'<small>voz/música</small>':'')+'</button>').join('')||'<p class="cn">No hay canciones con tiempos guardadas todavía.</p>';
+    $('rls').innerHTML=ls.filter(x=>!q||x[1].toLowerCase().includes(q)).map(x=>'<button type="button" data-id="'+x[0]+'"'+(x[0]===curId?' aria-current="true"':'')+'><i>'+(x[0]===curId?'♪':'▶')+'</i><span>'+X(x[1])+'</span>'+(x[3]?'<small>💿 '+X(x[3])+'</small>':'')+(x[2]?'<small>voz/música</small>':'')+'</button>').join('')||'<p class="cn">No hay canciones con tiempos guardadas todavía.</p>';
   };
   rmtUiMsg=m=>{
     if(!m||m.t!=='st')return;last=performance.now();
