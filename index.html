@@ -24,6 +24,7 @@
 #rmt>*{position:relative}
 #rmt .rhd{display:flex;align-items:center;gap:10px;padding:max(12px,env(safe-area-inset-top)) 16px 6px;max-width:560px;width:100%;margin:0 auto}
 #rmt .rhd b{font-size:15px;letter-spacing:.01em;flex:1}
+#rmt .rrl{background:rgba(255,255,255,.14);border:0;color:#fff;width:38px;height:38px;padding:0;justify-content:center;border-radius:50%;font-size:20px;line-height:1}#rmt .rrl:active{background:rgba(255,255,255,.28)}
 #rmt .rdot{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.12)}
 #rmt .rdot::before{content:"";width:8px;height:8px;border-radius:50%;background:#ff6b6b}#rmt .rdot.on::before{background:#1ed760;box-shadow:0 0 0 3px rgba(30,215,96,.3)}
 #rmt .rtabs{display:flex;gap:4px;margin:4px 16px 0;padding:4px;border-radius:99px;background:rgba(255,255,255,.1);max-width:528px;width:calc(100% - 32px);align-self:center}
@@ -267,6 +268,9 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kfm label.btn{display:inline-flex;grid-template-columns:none}#kfm .fr{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px}
 #kp.imm #kcp{display:none!important}
 @keyframes klm{to{transform:translate3d(var(--dx),var(--dy),0) scale(1.12);rotate:var(--rt)}}
+#kp.kln #kbg::before,#kp.sh-foc #kbg::before,#kp.sh-ban #kbg::before{content:"";position:absolute;left:-22vmax;top:-22vmax;width:80vmax;height:80vmax;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(var(--c1,30,215,96),.62),rgba(var(--c1,30,215,96),.32) 38%,rgba(var(--c1,30,215,96),0) 70%)}
+#kp.anim.kln #kbg::before,#kp.anim.sh-foc #kbg::before,#kp.anim.sh-ban #kbg::before{animation:kcor 17s ease-in-out infinite alternate}
+@keyframes kcor{to{transform:translate3d(14vmax,10vmax,0) scale(1.15)}}
 #kp.kln.anim #kbg i{animation-name:klm}
 #kp.kln.anim #kbg i:nth-child(1){--dx:18vmax;--dy:22vmax;--rt:-10deg;animation-duration:12s}
 #kp.kln.anim #kbg i:nth-child(2){--dx:-20vmax;--dy:18vmax;--rt:-26deg;animation-duration:15s}
@@ -1604,7 +1608,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.52',PK='lyricsync_projects';
+const APP_VERSION='3.53',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -4087,7 +4091,7 @@ if(RMT_REMOTE){
   LS_BLOCKED=true;try{a.pause()}catch(e){}
   const pk=$('pk');if(pk)pk.hidden=true;
   const ui=document.createElement('div');ui.id='rmt';
-  ui.innerHTML='<div class="rhd"><b>🎤 Lyric Sync</b><span class="rdot" id="rcn">sin conexión</span></div>'
+  ui.innerHTML='<div class="rhd"><b>🎤 Lyric Sync</b><span class="rdot" id="rcn">sin conexión</span><button id="rrl" class="rrl" aria-label="Recargar la página (la conexión se recupera sola)" title="Recargar la página: la conexión con la computadora se recupera sola">↻</button></div>'
    +'<div class="rtabs" role="tablist"><button role="tab" id="rt1" aria-selected="true">Reproduciendo</button><button role="tab" id="rt2" aria-selected="false">Canciones</button></div>'
    +'<div class="rv" id="rv1">'
    +'<div class="rart" id="rart">♪</div>'
@@ -4116,7 +4120,7 @@ if(RMT_REMOTE){
     $('rls').innerHTML=ls.filter(x=>!q||x[1].toLowerCase().includes(q)).map(x=>'<button type="button" data-id="'+x[0]+'"'+(x[0]===curId?' aria-current="true"':'')+'><i>'+(x[0]===curId?'♪':'▶')+'</i><span>'+X(x[1])+'</span>'+(x[3]?'<small>💿 '+X(x[3])+'</small>':'')+(x[2]?'<small>voz/música</small>':'')+'</button>').join('')||'<p class="cn">No hay canciones con tiempos guardadas todavía.</p>';
   };
   rmtUiMsg=m=>{
-    if(!m||m.t!=='st')return;last=performance.now();
+    if(!m||m.t!=='st')return;last=performance.now();ui._last=Object.assign({},m,{ex:undefined});if(m.ex)ui._lastx=m.ex;
     const rc=$('rcn');rc.textContent=viaDc?'conectado · celular':'conectado';rc.classList.add('on');
     $('rti').textContent=m.title||'Sin canción';$('rll').textContent=m.line||'';
     $('rpl').textContent=m.play?'⏸':'▶';
@@ -4142,8 +4146,16 @@ if(RMT_REMOTE){
   rmt.bc=window.BroadcastChannel?new BroadcastChannel('lyricsync-remote'):null;
   if(rmt.bc)rmt.bc.onmessage=e=>{if(!window.opener)rmtUiMsg(e.data)};
   addEventListener('message',e=>{const d=e.data;if(d&&d.ls&&d.m&&e.source===window.opener)rmtUiMsg(d.m)});
+  try{const sn=JSON.parse(sessionStorage.getItem('lsRmtSnap')||'null');sessionStorage.removeItem('lsRmtSnap');
+    if(sn&&sn.m&&Date.now()-sn.t<60000){rmtUiMsg(Object.assign({},sn.m,{ex:sn.x,play:false}));$('rcn').textContent='reconectando…';$('rcn').classList.remove('on');last=null}}catch(e){}
   const hi=()=>out({hi:1,ck:$('rart').dataset.k||''});hi();setInterval(()=>{hi();if(last&&performance.now()-last>5000&&!viaDc){$('rcn').textContent='sin conexión';$('rcn').classList.remove('on')}},2500);
   const cmd=(c,v)=>()=>out({c,v});
+  $('rrl').onclick=()=>{
+    const paired=!!getMeta().rmpair,opened=!!(window.opener&&!window.opener.closed);
+    if(viaDc&&!paired&&!opened&&!confirm('Esta conexión se hizo copiando códigos a mano y no se puede recuperar sola. Si recargás tendrás que conectar de nuevo. ¿Recargar igual?'))return;
+    try{sessionStorage.setItem('lsRmtSnap',JSON.stringify({m:ui._last,x:ui._lastx,t:Date.now()}))}catch(e){}
+    location.reload();
+  };
   $('rpl').onclick=cmd('toggle');$('rpv').onclick=cmd('prev');$('rnx').onclick=cmd('next');
   $('rkp').onclick=cmd('kp');$('rfs').onclick=cmd('fs');$('rex').onclick=cmd('exit');$('rcl').onclick=cmd('close');
   $('rvl').oninput=()=>{$('rvl').style.setProperty('--p',$('rvl').value+'%');vseek=true;out({c:'vol',v:+$('rvl').value/100});clearTimeout(ui._vt);ui._vt=setTimeout(()=>{vseek=false},1200)};
@@ -4186,7 +4198,7 @@ if(RMT_REMOTE){
   phoneAuto();
   $('rcc').onclick=async()=>{try{await navigator.clipboard.writeText($('rar').value)}catch(e){$('rar').select()}};
   const m=/[#&]remote=([^&]+)/.exec(location.hash);
-  if(m){$('rcd').open=true;const tp=/[#&]t=([A-Za-z0-9]+)/.exec(location.hash);$('rof').value=decodeURIComponent(m[1])+(tp?'.'+tp[1]:'');setTimeout(()=>$('rgr').click(),50)}
+  if(m){const tp=/[#&]t=([A-Za-z0-9]+)/.exec(location.hash);try{history.replaceState(null,'',location.pathname+location.search+'#remote')}catch(e){}$('rcd').open=true;$('rof').value=decodeURIComponent(m[1])+(tp?'.'+tp[1]:'');setTimeout(()=>$('rgr').click(),50)}
 }
 </script>
 </body></html>
