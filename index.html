@@ -231,15 +231,18 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kcvt{font:800 clamp(18px,2.4vw,40px)/1.15 system-ui,sans-serif;text-shadow:0 2px 12px rgba(0,0,0,.35);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase}
 #kcva{font:500 clamp(14px,1.6vw,26px)/1.2 system-ui,sans-serif;text-align:center;opacity:.85}#kcva:empty{display:none}
 .kcb{display:flex;align-items:center;gap:12px;font:600 clamp(11px,1.1vw,17px) system-ui,sans-serif;font-variant-numeric:tabular-nums;opacity:.92;margin-top:6px}
-#kcbg{flex:1;height:clamp(9px,1.1vw,16px);border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden;pointer-events:auto;cursor:pointer}
-#kcbi{display:block;height:100%;width:0;background:#fff;border-radius:99px}
-@media (min-aspect-ratio:1/1) and (min-width:760px){#kp.cov #kpw{margin-left:calc(min(32vw,56vh) + 11vw)}}
+#kcbg{flex:1;height:clamp(9px,1.1vw,16px);border-radius:99px;background:rgba(255,255,255,.22);pointer-events:auto;cursor:pointer;touch-action:none;position:relative}
+#kcbg::before{content:"";position:absolute;left:-6px;right:-6px;top:-14px;bottom:-14px}
+#kcbi{display:block;height:100%;width:0;background:#fff;border-radius:99px;position:relative}
+#kcbi::after{content:"";position:absolute;right:calc(clamp(14px,1.5vw,22px)/-2);top:50%;width:clamp(14px,1.5vw,22px);height:clamp(14px,1.5vw,22px);margin-top:calc(clamp(14px,1.5vw,22px)/-2);border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.45);transform:scale(.01);transition:transform .15s}
+#kcbg:hover #kcbi::after,#kcbg.dn #kcbi::after{transform:scale(1)}
+@media (min-aspect-ratio:1/1) and (min-width:760px){#kp.cov #kpg,#kp.cov #kpm{display:none}#kp.cov #kpw{margin-left:calc(min(32vw,56vh) + 11vw)}}
 @media (max-aspect-ratio:1/1),(max-width:759px){#kp.cov #kcv{display:none}}
 #kcp{position:absolute;z-index:8;top:64px;right:12px;width:min(330px,calc(100vw - 24px));background:rgba(18,22,21,.96);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:14px;display:grid;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.5);font-size:13px}
 #kcp .btn{justify-content:center;border:1px solid rgba(255,255,255,.3);color:#fff;background:rgba(255,255,255,.1)}#kcp .ck{display:flex;gap:8px;align-items:flex-start}
 #kfm .btn{background:rgba(255,255,255,.1)}#kcp .rs,#kfm .btn,#kfm .rq{color:#fff;border:1px solid rgba(255,255,255,.25);justify-content:center;font-size:12px;padding:6px 12px}
 #kcp p{margin:0;opacity:.7;font-size:12px}
-#kfm .fr{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px}
+#kfm label.btn{display:inline-flex;grid-template-columns:none}#kfm .fr{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px}
 #kp.imm #kcp{display:none!important}
 @keyframes klm{to{transform:translate3d(var(--dx),var(--dy),0) scale(1.12);rotate:var(--rt)}}
 #kp.kln.anim #kbg i{animation-name:klm}
@@ -1578,7 +1581,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.46',PK='lyricsync_projects';
+const APP_VERSION='3.47',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3672,7 +3675,7 @@ async function kpCover(){
       kcvURL=URL.createObjectURL(blob);const im=$('kcvi');im.src=kcvURL;
       await new Promise(r=>{im.onload=r;im.onerror=r;setTimeout(r,3000)});
       try{kcvCols=covColors(im);covDraw(im);
-        const t=document.createElement('canvas');t.width=t.height=180;const c=t.getContext('2d'),s0=Math.min(im.naturalWidth,im.naturalHeight);c.drawImage(im,(im.naturalWidth-s0)/2,(im.naturalHeight-s0)/2,s0,s0,0,0,180,180);kcvThumb=t.toDataURL('image/jpeg',.8)}catch(e){}
+        const t=document.createElement('canvas');t.width=t.height=520;const c=t.getContext('2d'),s0=Math.min(im.naturalWidth,im.naturalHeight);c.imageSmoothingQuality='high';c.drawImage(im,(im.naturalWidth-s0)/2,(im.naturalHeight-s0)/2,s0,s0,0,0,520,520);kcvThumb=t.toDataURL('image/jpeg',.92)}catch(e){}
     }
     kcvApply();
   }finally{kcvBusy=false}
@@ -3695,7 +3698,12 @@ async function kcvSet(file){
   $('kcs').onchange=()=>{setMeta({kpcs:$('kcs').checked});kcvApply();setTimeout(()=>{kpMeasure();kp.ft=0},60)};
   $('kcb').onchange=()=>{setMeta({kpcb:$('kcb').checked});kcvApply()};
   $('kca').oninput=()=>{if(!PR.cur)return;const k=Object.assign({},getMeta().kart||{});k[PR.cur]=$('kca').value;setMeta({kart:k});$('kcva').textContent=$('kca').value};
-  $('kcbg').addEventListener('pointerdown',e=>{const r=$('kcbg').getBoundingClientRect(),d=kp.virt?kp.vdur:a.duration;if(d&&isFinite(d)){kpSeek(c01((e.clientX-r.left)/r.width)*d);kp.hold=0}});
+  {const g=$('kcbg');let dn=false;
+   const seek=e=>{const r=g.getBoundingClientRect(),d=kp.virt?kp.vdur:a.duration;if(!d||!isFinite(d)||r.width<=0)return;kpSeek(c01((e.clientX-r.left)/r.width)*d);kp.hold=0};
+   g.addEventListener('pointerdown',e=>{dn=true;g.classList.add('dn');try{g.setPointerCapture(e.pointerId)}catch(x){}seek(e);e.preventDefault()});
+   g.addEventListener('pointermove',e=>{if(dn)seek(e)});
+   ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>g.addEventListener(ev,()=>{dn=false;g.classList.remove('dn')}));
+   g.setAttribute('tabindex','0');g.addEventListener('keydown',e=>{const k=e.key==='ArrowRight'?5:e.key==='ArrowLeft'?-5:0;if(k){kpSeek(kpT()+k);e.preventDefault()}})}
   $('kcx').onclick=async()=>{if(PR.cur){try{await adbDel('cover:'+PR.cur)}catch(e){}await kpCover();note('Portada quitada.')}};
   $('kpcv').onclick=e=>{e.stopPropagation();m.hidden=!m.hidden;if(!m.hidden){$('kthm').hidden=true;$('kfm').hidden=true;kcvApply()}};
   $('kpth').addEventListener('click',()=>{if(!$('kthm').hidden)m.hidden=true});
@@ -3709,8 +3717,12 @@ function kfRebuild(){
   const sel=$('kff');if(!sel)return;const cur=sel.value;
   sel.innerHTML=KFONTS.map(f=>'<option value="'+f[0]+'">'+X(f[1])+'</option>').join('');sel.value=KFONTS.some(f=>f[0]===cur)?cur:'sys';
 }
+function kfMsg(t,bad){const e=$('kfs');if(e){e.textContent=t;e.style.color=bad?'#ff8f8f':'#7dffa8';e.hidden=!t}}
 async function kfRegister(id,name,blob){
-  const ff=new FontFace('LSF'+id,await blob.arrayBuffer());await ff.load();document.fonts.add(ff);kfRefs[id]=ff;
+  let ff;
+  try{ff=new FontFace('LSF'+id,await blob.arrayBuffer());await ff.load()}
+  catch(e1){const u=URL.createObjectURL(blob);try{ff=new FontFace('LSF'+id,'url('+u+')');await ff.load()}catch(e2){throw e2}}
+  document.fonts.add(ff);kfRefs[id]=ff;
   if(!KFONTS.some(f=>f[0]==='u'+id))KFONTS.push(['u'+id,name+' (tuya)','"LSF'+id+'",system-ui,sans-serif']);
 }
 async function kfInit(){
@@ -3718,19 +3730,21 @@ async function kfInit(){
   kfRebuild();kpTypo();
 }
 async function kfAdd(file){
-  const name=file.name.replace(/\.[^.]+$/,'').slice(0,40)||'Fuente',id=Date.now().toString(36);
-  try{await kfRegister(id,name,file)}catch(e){note('Ese archivo no es una fuente válida (.ttf, .otf, .woff o .woff2).');return}
-  await adbSet('font:'+id,file);setMeta({kfonts:(getMeta().kfonts||[]).concat([{id,name}])});kfRebuild();kpTypo({f:'u'+id});note('Fuente «'+name+'» agregada.');
+  const name=file.name.replace(/\.[^.]+$/,'').slice(0,40)||'Fuente',id=Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  kfMsg('Cargando «'+name+'»…');
+  try{await kfRegister(id,name,file)}catch(e){kfMsg('No pude usar «'+file.name+'»: el navegador no la reconoce como fuente ('+((e&&e.message)||'archivo no válido')+'). Probá con un .ttf, .otf, .woff o .woff2.',true);return false}
+  try{await adbSet('font:'+id,file)}catch(e){kfMsg('Se cargó, pero no pude guardarla para la próxima vez.',true)}
+  setMeta({kfonts:(getMeta().kfonts||[]).concat([{id,name}])});kfRebuild();kpTypo({f:'u'+id});kfMsg('✔ «'+name+'» agregada y elegida.');return true;
 }
-async function kfRemove(){
+async function kfRemove(){kfMsg('');
   const v=$('kff').value;if(v[0]!=='u')return;const id=v.slice(1);
   try{await adbDel('font:'+id)}catch(e){}try{document.fonts.delete(kfRefs[id])}catch(e){}
   setMeta({kfonts:(getMeta().kfonts||[]).filter(f=>f.id!==id)});const i=KFONTS.findIndex(f=>f[0]===v);if(i>=0)KFONTS.splice(i,1);kfRebuild();kpTypo({f:'sys'});
 }
 (function(){
   const m=$('kfm');
-  m.insertAdjacentHTML('beforeend','<div class="fr"><label class="btn">＋ Agregar fuente<input id="kfa" type="file" accept=".ttf,.otf,.woff,.woff2,font/*" hidden></label><button type="button" class="rq" id="kfq">Quitar la elegida</button></div>');
-  $('kfa').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)kfAdd(f)};
+  m.insertAdjacentHTML('beforeend','<div class="fr"><label class="btn">＋ Agregar fuente<input id="kfa" type="file" multiple hidden></label><button type="button" class="rq" id="kfq">Quitar la elegida</button></div><div id="kfs" role="status" hidden style="font-size:12.5px"></div>');
+  $('kfa').onchange=async e=>{const fs=[...e.target.files];e.target.value='';for(const f of fs)await kfAdd(f)};
   $('kfq').onclick=kfRemove;
   kfInit();
 })();
@@ -3898,7 +3912,7 @@ function rmtState(full){
 function rmtExtras(){
   if(PR.cur!==kcvFor&&!kcvBusy&&PR.cur)kpCover().catch(()=>{});
   const ids=kjList();if(PR.cur&&PR.list[PR.cur]&&!ids.includes(PR.cur))ids.unshift(PR.cur);
-  return{lst:ids.filter(id=>PR.list[id]).map(id=>[id,PR.list[id].name||'Sin nombre',(PR.list[id].stm||0)>=2?1:0]),cv:PR.cur===kcvFor?kcvThumb:'',cl:PR.cur===kcvFor&&kcvCols?kcvCols[0]:null,kj:!!kj.on}
+  return{lst:ids.filter(id=>PR.list[id]).map(id=>[id,PR.list[id].name||'Sin nombre',(PR.list[id].stm||0)>=2?1:0]),ck:PR.cur===kcvFor?(kcvFor+':'+kcvThumb.length):'',cv:PR.cur!==kcvFor||!kcvThumb?'':(rmt.ck===kcvFor+':'+kcvThumb.length?undefined:kcvThumb),cl:PR.cur===kcvFor&&kcvCols?kcvCols[0]:null,kj:!!kj.on}
 }
 /* Anterior/siguiente como en Spotify: «anterior» vuelve al principio si ya pasaron 3 s, y si no, va a la canción anterior */
 function rmtSong(dir){
@@ -3941,7 +3955,7 @@ function rmtPush(full){
   const live=performance.now()-rmt.act<7000||rmt.wins.some(w=>!w.closed)||(rmt.dc&&rmt.dc.readyState==='open');
   if(live)rmtOut(rmtState(full===true||(++rmtN%8===0)));
 }
-function rmtHostMsg(m){if(!m||typeof m!=='object')return;rmt.act=performance.now();if(m.c)rmtCmd(m);else rmtPush(true)}
+function rmtHostMsg(m){if(!m||typeof m!=='object')return;rmt.act=performance.now();if('ck' in m)rmt.ck=m.ck;if(m.c)rmtCmd(m);else rmtPush(true)}
 function rmtStat(t){const e=$('rms');if(e)e.textContent=t||''}
 function rmtWire(dc,host){
   dc.onopen=()=>{rmt.act=performance.now();if(host){rmtStat('📱 Celular conectado.');rmtPush();if(rmt.pt){setMeta({rmpair:rmt.pt});rmt.pt='';rmtPairListen()}}else rmtUiConn(true)};
@@ -4046,8 +4060,8 @@ if(RMT_REMOTE){
     $('rab').hidden=!m.busy;
     if(m.cur!==curId){curId=m.cur;rlist();if(!m.ex){$('rart').textContent='♪';rcol(null)}}
     if(m.ex){
-      if(m.ex.cv){if($('rart').dataset.s!==m.ex.cv){$('rart').dataset.s=m.ex.cv;$('rart').innerHTML='<img alt="Portada" src="'+m.ex.cv+'">'}}
-      else if($('rart').dataset.s){$('rart').dataset.s='';$('rart').textContent='♪'}
+      if(m.ex.cv){$('rart').dataset.s='1';$('rart').dataset.k=m.ex.ck||'';$('rart').innerHTML='<img alt="Portada" src="'+m.ex.cv+'">'}
+      else if(m.ex.cv===''&&$('rart').dataset.s){$('rart').dataset.s='';$('rart').dataset.k='';$('rart').textContent='♪'}
       rcol(m.ex.cl);
       const sig=JSON.stringify(m.ex.lst);if(sig!==lastLst){lastLst=sig;ui._lst=m.ex.lst;rlist()}
     }
@@ -4060,7 +4074,7 @@ if(RMT_REMOTE){
   rmt.bc=window.BroadcastChannel?new BroadcastChannel('lyricsync-remote'):null;
   if(rmt.bc)rmt.bc.onmessage=e=>{if(!window.opener)rmtUiMsg(e.data)};
   addEventListener('message',e=>{const d=e.data;if(d&&d.ls&&d.m&&e.source===window.opener)rmtUiMsg(d.m)});
-  const hi=()=>out({hi:1});hi();setInterval(()=>{hi();if(last&&performance.now()-last>5000&&!viaDc){$('rcn').textContent='sin conexión';$('rcn').classList.remove('on')}},2500);
+  const hi=()=>out({hi:1,ck:$('rart').dataset.k||''});hi();setInterval(()=>{hi();if(last&&performance.now()-last>5000&&!viaDc){$('rcn').textContent='sin conexión';$('rcn').classList.remove('on')}},2500);
   const cmd=(c,v)=>()=>out({c,v});
   $('rpl').onclick=cmd('toggle');$('rpv').onclick=cmd('prev');$('rnx').onclick=cmd('next');
   $('rkp').onclick=cmd('kp');$('rfs').onclick=cmd('fs');$('rex').onclick=cmd('exit');$('rcl').onclick=cmd('close');
