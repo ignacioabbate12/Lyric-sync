@@ -494,7 +494,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <div class="row"><button id="rmw" class="pri">Abrir ventana de control</button><span id="rms" class="mu" role="status"></span></div>
   <h3 style="margin:16px 0 4px;font-size:15px">Celular (sin servidor, por Wi-Fi)</h3>
   <ol style="font-size:13.5px"><li>En el celular abrí esta misma app (el mismo archivo o la misma dirección) con <b>#remote</b> al final, o usá el enlace de abajo si la app está en una dirección web.</li><li>Tocá <b>Generar código</b> acá, copiá el código y pegalo en el celular.</li><li>El celular te muestra un código de respuesta: pegalo acá y tocá <b>Conectar</b>.</li></ol>
-  <div class="row"><button id="rmg">Generar código</button><label><input type="checkbox" id="rmnt" checked> Conexión automática con un solo escaneo (usa ntfy.sh)</label><label><input type="checkbox" id="rmst"> Usar servidor STUN público de Google (para redes distintas)</label></div>
+  <div class="row"><button id="rmg">Generar código</button><button id="rmfg" title="Borra el emparejamiento guardado">Olvidar celular</button><label><input type="checkbox" id="rmnt" checked> Conexión automática con un solo escaneo (usa ntfy.sh)</label><label><input type="checkbox" id="rmst"> Usar servidor STUN público de Google (para redes distintas)</label></div>
   <div id="rmq" hidden style="margin:10px 0;line-height:0"></div>
   <textarea id="rmo" readonly placeholder="Código para el celular" aria-label="Código para el celular" hidden></textarea>
   <div class="row" id="rmor" hidden><button id="rmc">Copiar código</button><button id="rml">Copiar enlace</button></div>
@@ -1514,7 +1514,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.43',PK='lyricsync_projects';
+const APP_VERSION='3.44',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3682,10 +3682,28 @@ function rmtSplit(t){
 }
 let rmtES=null;
 function rmtListen(topic){
-  rmtUnlisten();if(!topic||!window.EventSource)return;
+  rmtUnlisten();rmt.pt=topic||'';if(!topic||!window.EventSource)return;
   const es=new EventSource(RMT_RELAY+'/'+topic+'/sse');rmtES=es;
   es.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}
     if(m&&m.event==='message'&&m.message&&rmt.pc&&rmt.pc.signalingState==='have-local-offer'){rmtUnlisten();$('rma').value=m.message;$('rmk').click()}};
+}
+/* Reconexión automática: con un celular ya emparejado, si cualquiera de las dos páginas se recarga el celular vuelve a conectarse solo (por el mismo canal de ntfy.sh) */
+let rmtES2=null;
+function rmtPairListen(){
+  try{rmtES2&&rmtES2.close()}catch(e){}rmtES2=null;
+  const T=getMeta().rmpair;if(!T||!window.EventSource||RMT_REMOTE)return;
+  const es=new EventSource(RMT_RELAY+'/'+T+'a/sse');rmtES2=es;
+  es.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}if(m&&m.event==='message'&&m.message)rmtPairOffer(m.message)};
+}
+async function rmtPairOffer(msg){
+  const T=getMeta().rmpair;if(!T)return;
+  try{
+    const pc=new RTCPeerConnection(rtcIce($('rmst').checked));
+    pc.ondatachannel=e=>{if(rmt.pc&&rmt.pc!==pc)rmtPcClose();rmt.pc=pc;rmt.dc=e.channel;rmtWire(rmt.dc,true)};
+    await pc.setRemoteDescription(rtcDec(msg));await pc.setLocalDescription(await pc.createAnswer());await rtcWait(pc);
+    await fetch(RMT_RELAY+'/'+T+'b',{method:'POST',body:rtcEnc(pc.localDescription)});
+    rmt.act=performance.now();
+  }catch(e){}
 }
 function rmtUnlisten(){if(rmtES){try{rmtES.close()}catch(e){}rmtES=null}}
 let rmtQrText='';const rmtQrShow=(el,text)=>{rmtQrText=text;try{el.innerHTML=QR.svg(text,260);el.hidden=false}catch(e){el.innerHTML='';el.hidden=true}};
@@ -3754,7 +3772,7 @@ function rmtPush(){
 function rmtHostMsg(m){if(!m||typeof m!=='object')return;rmt.act=performance.now();if(m.c)rmtCmd(m);else rmtPush()}
 function rmtStat(t){const e=$('rms');if(e)e.textContent=t||''}
 function rmtWire(dc,host){
-  dc.onopen=()=>{rmt.act=performance.now();if(host){rmtStat('📱 Celular conectado.');rmtPush()}else rmtUiConn(true)};
+  dc.onopen=()=>{rmt.act=performance.now();if(host){rmtStat('📱 Celular conectado.');rmtPush();if(rmt.pt){setMeta({rmpair:rmt.pt});rmt.pt='';rmtPairListen()}}else rmtUiConn(true)};
   dc.onclose=()=>{if(host)rmtStat('Celular desconectado.');else rmtUiConn(false)};
   dc.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(x){return}if(host)rmtHostMsg(m);else rmtUiMsg(m)};
 }
@@ -3799,6 +3817,9 @@ if(!RMT_REMOTE){
   const cp=async t=>{try{await navigator.clipboard.writeText(t);rmtStat('Copiado.')}catch(e){$('rmo').select();rmtStat('Copialo a mano (Ctrl+C).')}};
   $('rmc').onclick=()=>cp($('rmo').value);
   $('rml').onclick=()=>cp(location.href.split('#')[0]+'#remote='+$('rmo').value);
+  rmtPairListen();
+  $('rmfg').onclick=()=>{setMeta({rmpair:null});try{rmtES2&&rmtES2.close()}catch(e){}rmtES2=null;rmtStat('Celular olvidado: para volver a conectarlo, escaneá un QR nuevo.')};
+  $('rmnt').onchange=()=>{if(!$('rmnt').checked)$('rmfg').click()};
   if(qrCanScan())$('rmsc').hidden=false;
   $('rmsc').onclick=()=>qrScan(t=>{$('rma').value=t;$('rmk').click()});
   $('rmk').onclick=async()=>{
@@ -3862,11 +3883,31 @@ if(RMT_REMOTE){
       await pc.setRemoteDescription(rtcDec(sp.code));
       await pc.setLocalDescription(await pc.createAnswer());await rtcWait(pc);
       const ac=rtcEnc(pc.localDescription);$('rar').value=ac;$('rar').hidden=$('rcc').hidden=false;rmtQrShow($('rrq'),ac);$('rrh').hidden=false;
-      if(relayTopic){try{const r=await fetch(RMT_RELAY+'/'+relayTopic,{method:'POST',body:ac});if(r.ok){$('rrh').textContent='Respuesta enviada: conectando con la computadora…';$('rrq').hidden=true}}catch(e){}}
+      if(relayTopic){try{const r=await fetch(RMT_RELAY+'/'+relayTopic,{method:'POST',body:ac});if(r.ok){$('rrh').textContent='Respuesta enviada: conectando con la computadora…';$('rrq').hidden=true;setMeta({rmpair:relayTopic});setTimeout(phoneAuto,25000)}}catch(e){}}
     }catch(err){$('rar').value='Código no válido o conexión no permitida: '+(err&&err.message||err);$('rar').hidden=false}
   };
   if(qrCanScan())$('rsc').hidden=false;$('rsc').onclick=()=>qrScan(t=>{$('rof').value=t;$('rgr').click()});
   let relayTopic='';
+  const phoneAuto=()=>{
+    const T=getMeta().rmpair;if(!T||!window.EventSource||rmt.auto)return;rmt.auto=true;let busy=false;
+    const attempt=async()=>{
+      if(busy||(rmt.dc&&rmt.dc.readyState==='open'))return;
+      if(rmt.pc&&['new','connecting'].includes(rmt.pc.connectionState)&&performance.now()-(rmt.t0||0)<25000)return;
+      busy=true;let es=null;
+      try{
+        rmtPcClose();const pc=new RTCPeerConnection(rtcIce(false));rmt.pc=pc;rmt.t0=performance.now();
+        rmt.dc=pc.createDataChannel('ls');rmtWire(rmt.dc,false);
+        const ans=new Promise((ok,no)=>{es=new EventSource(RMT_RELAY+'/'+T+'b/sse');es.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.event==='message'&&m.message)ok(m.message)}catch(x){}};setTimeout(()=>no(new Error('sin respuesta')),20000)});
+        await pc.setLocalDescription(await pc.createOffer());await rtcWait(pc);
+        await fetch(RMT_RELAY+'/'+T+'a',{method:'POST',body:rtcEnc(pc.localDescription)});
+        const a=await ans;await pc.setRemoteDescription(rtcDec(a));
+        $('rcn').textContent='reconectando…';
+      }catch(e){}
+      try{es&&es.close()}catch(e){}busy=false;
+    };
+    setInterval(attempt,7000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)attempt()});attempt();
+  };
+  phoneAuto();
   $('rcc').onclick=async()=>{try{await navigator.clipboard.writeText($('rar').value)}catch(e){$('rar').select()}};
   const m=/[#&]remote=([^&]+)/.exec(location.hash);
   if(m){$('rcd').open=true;const tp=/[#&]t=([A-Za-z0-9]+)/.exec(location.hash);$('rof').value=decodeURIComponent(m[1])+(tp?'.'+tp[1]:'');setTimeout(()=>$('rgr').click(),50)}
