@@ -1629,7 +1629,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.58',PK='lyricsync_projects';
+const APP_VERSION='3.59',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3792,7 +3792,7 @@ function kcvApply(){
   el.classList.toggle('cov',has&&m.kpcs!==false);
   const bg=has&&!!m.kpcb;el.classList.toggle('cvbg',bg);
   $('kcvt').textContent=(PR.cur&&PR.list[PR.cur]&&PR.list[PR.cur].name)||'';
-  const ar=(m.kart||{})[artKey(PR.cur)]||'';$('kcva').textContent=ar;if($('kca')&&document.activeElement!==$('kca'))$('kca').value=ar;
+  const ar=artGet(PR.cur);$('kcva').textContent=ar;if($('kca')&&document.activeElement!==$('kca'))$('kca').value=ar;
   if(bg&&kcvCols){el.style.setProperty('--fbg',kcvCols[0].map(v=>Math.round(v*.22)+6).join(','));kcvCols.forEach((c,i)=>el.style.setProperty('--c'+(i+1),covBoost(c).join(',')))}
   else{el.style.removeProperty('--fbg');if(el._cvt){el._cvt=0;try{kpTheme(getMeta().kpth)}catch(e){}}}
   el._cvt=bg&&kcvCols?1:0;
@@ -3802,6 +3802,9 @@ function kcvApply(){
 const albKey=n=>String(n||'').trim().toLowerCase();
 const projAlbum=id=>{const p=PR.list[id];return p&&p.album?String(p.album).trim():''};
 const coverKey=id=>projAlbum(id)?'cover:album:'+albKey(projAlbum(id)):'cover:'+id;
+/* Artista: el álbum guarda uno «por defecto» que toman las canciones nuevas del álbum; si se cambia en una canción, el cambio es solo de esa canción */
+const artGet=id=>{const k=getMeta().kart||{};if(id&&Object.prototype.hasOwnProperty.call(k,id))return k[id]||'';const al=projAlbum(id);return al?(k[artKey(id)]||''):''};
+let kcaDef=false;
 const artKey=id=>projAlbum(id)?'album:'+albKey(projAlbum(id)):id;
 function albUI(){
   const el=$('pjal');if(!el)return;
@@ -3853,13 +3856,20 @@ async function kcvSet(file){
    +'<label class="ck"><input type="checkbox" id="kcs"> Mostrar la portada junto a la letra</label>'
    +'<label class="ck"><input type="checkbox" id="kcb"> Fondo con los colores de la portada, muy difuminado</label>'
    +'<label class="ck" style="align-items:center">Forma del fondo <select id="kcsh" style="margin-left:auto;background:rgba(255,255,255,.12);color:#fff;border:0;border-radius:8px;padding:.35em .6em;color-scheme:dark"><option value="circ">● Círculos</option><option value="lin">╱ Líneas</option><option value="bok">✦ Orbes</option><option value="foc">◢ Focos</option><option value="ban">▥ Bandas</option></select></label>'
-   +'<input type="text" id="kcal" list="pjall" maxlength="60" placeholder="Álbum (opcional)" aria-label="Álbum" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:.5em .7em"><input type="text" id="kca" maxlength="80" placeholder="Artista (opcional)" aria-label="Artista" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:.5em .7em"><button type="button" class="rs" id="kcx">Quitar portada</button><p>La portada se guarda con este proyecto (en este navegador).</p>';
+   +'<input type="text" id="kcal" list="pjall" maxlength="60" placeholder="Álbum (opcional)" aria-label="Álbum" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:.5em .7em"><input type="text" id="kca" maxlength="80" placeholder="Artista (opcional)" title="En un álbum, el primer artista que escribas lo toman todas sus canciones; si después lo cambiás, solo cambia en esta canción" aria-label="Artista" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:.5em .7em"><button type="button" class="rs" id="kcx">Quitar portada</button><p>La portada se guarda con este proyecto (en este navegador).</p>';
   $('kcf').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)kcvSet(f)};
   $('kcs').onchange=()=>{setMeta({kpcs:$('kcs').checked});kcvApply();setTimeout(()=>{kpMeasure();kp.ft=0},60)};
   $('kcsh').onchange=()=>kpShape($('kcsh').value);
   $('kcb').onchange=()=>{setMeta({kpcb:$('kcb').checked});kcvApply()};
   $('kcal').onchange=()=>setAlbum($('kcal').value);
-  $('kca').oninput=()=>{if(!PR.cur)return;const k=Object.assign({},getMeta().kart||{});k[artKey(PR.cur)]=$('kca').value;setMeta({kart:k});$('kcva').textContent=$('kca').value};
+  $('kca').onfocus=()=>{const k=getMeta().kart||{};kcaDef=!!projAlbum(PR.cur)&&!k[artKey(PR.cur)]};
+  $('kca').oninput=()=>{
+    if(!PR.cur)return;const k=Object.assign({},getMeta().kart||{}),v=$('kca').value,ak=artKey(PR.cur),al=!!projAlbum(PR.cur);
+    if(al&&kcaDef){k[ak]=v;delete k[PR.cur]} // primera vez: el álbum todavía no tenía artista, lo toman todas sus canciones
+    else if(al&&v===(k[ak]||'')&&v)delete k[PR.cur];
+    else k[PR.cur]=v; // cambio propio de esta canción
+    setMeta({kart:k});$('kcva').textContent=v;
+  };
   {const g=$('kcbg');let dn=false;
    const seek=e=>{const r=g.getBoundingClientRect(),d=kp.virt?kp.vdur:a.duration;if(!d||!isFinite(d)||r.width<=0)return;kpSeek(c01((e.clientX-r.left)/r.width)*d);kp.hold=0};
    g.addEventListener('pointerdown',e=>{dn=true;g.classList.add('dn');try{g.setPointerCapture(e.pointerId)}catch(x){}seek(e);e.preventDefault()});
