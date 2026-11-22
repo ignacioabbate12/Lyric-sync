@@ -1608,7 +1608,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.53',PK='lyricsync_projects';
+const APP_VERSION='3.55',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3171,8 +3171,9 @@ function kjPrev(){
 function kjExit(){
   kj.on=false;kj.tok++;try{a.pause()}catch(e){}kpRestoreRate();
   $('kp').classList.remove('kj');kpClose();
-  const back=kj.back;kj.back=null;
-  if(back&&PR.list[back]){a.addEventListener('loadedmetadata',()=>{try{a.pause()}catch(e){}},{once:true});openProj(back,true)}
+  kj.back=null; // se queda abierto el proyecto de la vista previa (el que estaba sonando), no el anterior
+  if(PR.cur&&PR.list[PR.cur])pjUI();
+  if(audioMode!=='full'){const ps=()=>{try{a.pause()}catch(e){}};a.addEventListener('loadedmetadata',ps,{once:true});setAudioMode('full').then(()=>{ps();setTimeout(ps,400);setTimeout(ps,1200)}).catch(()=>{})}
   $('pj').open=true;setTimeout(()=>{try{$('pj').scrollIntoView({block:'start'})}catch(e){}},60);
 }
 $('kjo').onclick=()=>kjStart();
@@ -3978,7 +3979,7 @@ function rmtState(full){
   const kpOn=!$('kp').hidden,p=PR.cur&&PR.list[PR.cur];
   const t=kpOn?kpT():a.currentTime;let line='',pos=-1;
   try{L.forEach((ln,i)=>{const s0=ln.w.length&&ln.w[0].s;if(s0!=null&&s0<=t+.05)pos=i});if(pos>=0)line=L[pos].w.map((x,k)=>(k&&!x.j?' ':'')+x.t).join('')}catch(e){}
-  return{t:'st',title:(p&&p.name)||'',play:kpOn?!kpPaused():!a.paused,pos:t,dur:(kpOn&&kp.virt?kp.vdur:a.duration)||0,line,rate:kpOn?(+$('kpv').value||1):a.playbackRate,vol:a.volume,mode:audioMode,busy:!!modeBusy,kp:kpOn,imm:$('kp').classList.contains('imm'),cur:PR.cur||'',ex:full?rmtExtras():undefined}
+  return{t:'st',title:(p&&p.name)||'',play:kpOn?!kpPaused():!a.paused,pos:t,dur:(kpOn&&kp.virt?kp.vdur:a.duration)||0,line,rate:kpOn?(+$('kpv').value||1):a.playbackRate,vol:a.volume,mode:audioMode,busy:!!modeBusy,kp:kpOn,imm:$('kp').classList.contains('imm'),fsr:!!document.fullscreenElement,cur:PR.cur||'',ex:full?rmtExtras():undefined}
 }
 /* lista de canciones y portada (se mandan solo de vez en cuando) */
 function rmtExtras(){
@@ -3997,6 +3998,17 @@ function rmtSong(dir){
   if(ids.length>1)kjPlay(ids[(i-1+ids.length)%ids.length],true);else kpSeekAny(0);
 }
 const kpSeekAny=t=>{if(!$('kp').hidden)kpSeek(t);else a.currentTime=t};
+/* El navegador solo deja entrar en pantalla completa real tras un toque/tecla en la computadora: si el pedido vino del celular, queda armado y el próximo toque o tecla en la computadora la activa */
+let rmtFsArmed=false;
+function rmtArmFs(){
+  if(rmtFsArmed)return;rmtFsArmed=true;
+  const off=()=>{rmtFsArmed=false;['pointerdown','keydown','touchstart'].forEach(t=>document.removeEventListener(t,go,true))};
+  const go=e=>{
+    off();if(e.type==='keydown'&&e.key==='Escape')return;
+    const el=$('kp');if(el.classList.contains('imm')&&!document.fullscreenElement){try{const r=el.requestFullscreen();if(r&&r.catch)r.catch(()=>{})}catch(x){}}
+  };
+  ['pointerdown','keydown','touchstart'].forEach(t=>document.addEventListener(t,go,true));
+}
 function rmtCmd(m){
   const kpOn=!$('kp').hidden;
   switch(m.c){
@@ -4009,7 +4021,10 @@ function rmtCmd(m){
     case'seek':if(isFinite(m.v)){kpOn?kpSeek(+m.v):(a.currentTime=Math.max(0,+m.v))}break;
     case'rate':{const v=+m.v;if(v>0){if(kpOn){const o=[...$('kpv').options].reduce((b,x)=>Math.abs(+x.value-v)<Math.abs(+b.value-v)?x:b);$('kpv').value=o.value;kpRate(o.value)}else a.playbackRate=v}break}
     case'kp':if($('kp').hidden)kpStart();break;
-    case'fs':if($('kp').hidden)kpStart();kpImm(true);break;
+    case'fs':if($('kp').hidden)kpStart();
+      if($('kp').classList.contains('imm')&&!document.fullscreenElement){try{const r=$('kp').requestFullscreen();if(r&&r.catch)r.catch(()=>{})}catch(e){}}
+      else kpImm(true);
+      setTimeout(()=>{if($('kp').classList.contains('imm')&&!document.fullscreenElement)rmtArmFs()},350);break;
     case'exit':kpImm(false);break;
     case'close':if(!$('kp').hidden)kpClose();break;
     case'song':if(PR.list[m.v]){if(kj.on)kjPlay(m.v);else kjStart(m.v)}break;
@@ -4100,7 +4115,7 @@ if(RMT_REMOTE){
    +'<div class="rb"><button id="rpv" aria-label="Anterior: una vez al principio, dos veces canción anterior" title="Una vez: al principio · dos veces: canción anterior">⏮</button><button id="rpl" aria-label="Reproducir o pausar">▶</button><button id="rnx" aria-label="Canción siguiente">⏭</button></div>'
    +'<div class="rvol"><span aria-hidden="true">🔈</span><input type="range" id="rvl" min="0" max="100" value="100" aria-label="Volumen"><span aria-hidden="true">🔊</span></div>'
    +'<div class="seg" id="rau" role="group" aria-label="Audio"><button data-am="full">Canción</button><button data-am="voice">Solo voz</button><button data-am="karaoke">Solo música</button></div><div class="cn" id="rab" hidden>Separando la voz y la música… puede tardar.</div>'
-   +'<div class="chips"><button id="rkp">🎬 Vista previa</button><button id="rfs">⛶ Pantalla completa</button><button id="rex">↙ Salir de pantalla completa</button><button id="rcl">✕ Cerrar vista previa</button></div>'
+   +'<div class="chips"><button id="rkp">🎬 Vista previa</button><button id="rfs">⛶ Pantalla completa</button><button id="rex">↙ Salir de pantalla completa</button><button id="rcl">✕ Cerrar vista previa</button></div><div class="cn" id="rfh" hidden>La pantalla ya está limpia, pero el navegador no deja ocultar también su barra desde el celular. Tocá una vez la pantalla de la computadora (o apretá una tecla) y queda en pantalla completa total.</div>'
    +'<div class="rrt"><span>Velocidad</span><select id="rrt" aria-label="Velocidad"><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></div>'
    +'<details id="rcd"><summary>Conectar desde el celular</summary><p class="cn">Pegá el código que te dio la computadora, tocá «Generar respuesta» y copiá el resultado de vuelta en la computadora.</p><div class="row"><button id="rsc" type="button" hidden>📷 Escanear el QR de la computadora</button></div><textarea id="rof" placeholder="Código de la computadora" aria-label="Código de la computadora"></textarea><div class="row"><button id="rgr" class="pri">Generar respuesta</button></div><div id="rrq" hidden style="line-height:0;margin:8px 0"></div><p class="cn" id="rrh" hidden>Ahora mostrale este QR a la computadora (botón «Escanear la respuesta») o copiá el código y pegalo allá.</p><textarea id="rar" readonly placeholder="Código de respuesta" aria-label="Código de respuesta" hidden></textarea><div class="row"><button id="rcc" hidden>Copiar respuesta</button></div></details></div>'
    +'<div class="rv" id="rv2" hidden><input class="rsrch" id="rq" type="search" placeholder="Buscar canción…" aria-label="Buscar canción"><div class="rls" id="rls" role="list"></div></div>';
@@ -4129,7 +4144,7 @@ if(RMT_REMOTE){
     if(document.activeElement!==$('rrt'))$('rrt').value=String([.5,.75,1,1.25,1.5,2].reduce((b,x)=>Math.abs(x-m.rate)<Math.abs(b-m.rate)?x:b));
     if(!vseek&&document.activeElement!==$('rvl')){const v=Math.round((m.vol==null?1:m.vol)*100);$('rvl').value=v;$('rvl').style.setProperty('--p',v+'%')}
     ui.querySelectorAll('[data-am]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.am===m.mode?'true':'false'));
-    $('rab').hidden=!m.busy;
+    $('rab').hidden=!m.busy;$('rfh').hidden=!(m.imm&&m.fsr===false);
     if(m.cur!==curId){curId=m.cur;rlist();if(!m.ex){$('rart').textContent='♪';rcol(null)}}
     if(m.ex){
       if(m.ex.cv){$('rart').dataset.s='1';$('rart').dataset.k=m.ex.ck||'';$('rart').innerHTML='<img alt="Portada" src="'+m.ex.cv+'">'}
