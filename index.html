@@ -65,6 +65,13 @@
 #rmt .rls button span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #rmt .rls button[aria-current=true]{background:rgba(255,255,255,.16);font-weight:700}
 #rmt .rls button[aria-current=true] i{background:#1ed760;color:#04140a}
+#rmt .rqnow small,#rmt .rqt{opacity:.65;font-size:12px}#rmt #rqn{font-weight:700;font-size:17px;margin-top:2px}#rmt .rqt{font-weight:600;margin-top:2px}
+#rmt .rqbar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}#rmt .rqbar button{background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:12px;padding:.6em .2em;font-size:12.5px;font-weight:600;justify-content:center}
+#rmt .rqbar button[aria-pressed=true]{background:#fff;color:#0b0f0e}
+#rmt .rq3,#rmt #rqa{display:flex;flex-direction:column;gap:4px}#rmt .rqi{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border-radius:12px;padding:6px 6px 6px 12px}
+#rmt .rqi span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14.5px}
+#rmt .rqi button{background:rgba(255,255,255,.14);border:0;color:#fff;border-radius:9px;min-width:38px;min-height:38px;font-size:13px;display:inline-flex;align-items:center;justify-content:center}#rmt .rqi button:disabled{opacity:.25}
+#rmt #rv3 summary{padding:.7em 0;font-weight:600;cursor:pointer}
 #rmt .rls small{opacity:.6;font-size:11px;flex:none}
 #rmd textarea{min-height:64px;font:11px ui-monospace,monospace}
 *{box-sizing:border-box}
@@ -266,7 +273,20 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kfm .btn{background:rgba(255,255,255,.1)}#kcp .rs,#kfm .btn,#kfm .rq{color:#fff;border:1px solid rgba(255,255,255,.25);justify-content:center;font-size:12px;padding:6px 12px}
 #kcp p{margin:0;opacity:.7;font-size:12px}
 #kfm label.btn{display:inline-flex;grid-template-columns:none}#kfm .fr{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px}
-#kp.imm #kcp{display:none!important}
+#kp.imm #kcp,#kp.imm #kq{display:none!important}
+.kpt #kqb{width:auto;min-width:0;border-radius:99px;padding:0 16px;white-space:nowrap;height:40px}
+#kq{position:absolute;z-index:8;top:64px;right:12px;width:min(360px,calc(100vw - 24px));max-height:calc(100% - 100px);overflow:auto;background:rgba(18,22,21,.97);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font-size:13px;color:#fff}
+#kq[hidden]{display:none}
+#kq button,#kq select{font:inherit;color:#fff;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);border-radius:8px;padding:5px 9px;cursor:pointer}
+#kq button:disabled{opacity:.3;cursor:default}
+#kq .kqhd,#kq .kqhd2{display:flex;justify-content:space-between;align-items:center;gap:8px}#kq .kqhd2 span{display:flex;gap:6px}
+#kq small{opacity:.65}#kqn{font-weight:700;font-size:15px;margin-top:2px}
+#kql{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;min-height:40px}
+#kql li{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:10px;background:rgba(255,255,255,.07)}
+#kql li.dg{opacity:.4}#kql li.ov{outline:2px solid #1ed760}
+#kql .kqh{cursor:grab;opacity:.55;padding:0 3px}#kql .kqs{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#kql li button{padding:3px 7px}#kql .kqe{background:none;opacity:.65;padding:8px 2px}
+#kq .kqad{display:flex;gap:6px;flex-wrap:wrap}#kq .kqad select{flex:1 1 100%;min-width:0}#kq .kqad button{flex:1}
 @keyframes klm{to{transform:translate3d(var(--dx),var(--dy),0) scale(1.12);rotate:var(--rt)}}
 #kp.kln #kbg::before,#kp.sh-foc #kbg::before,#kp.sh-ban #kbg::before{content:"";position:absolute;left:-22vmax;top:-22vmax;width:80vmax;height:80vmax;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(var(--c1,30,215,96),.62),rgba(var(--c1,30,215,96),.32) 38%,rgba(var(--c1,30,215,96),0) 70%)}
 #kp.anim.kln #kbg::before,#kp.anim.sh-foc #kbg::before,#kp.anim.sh-ban #kbg::before{animation:kcor 17s ease-in-out infinite alternate}
@@ -623,10 +643,11 @@ dialog p{margin:6px 0;color:var(--mu)}
   <canvas id="kbi" width="24" height="24" aria-hidden="true"></canvas><canvas id="kbi2" width="24" height="24" aria-hidden="true"></canvas>
   <div id="kcv"><img id="kcvi" alt=""><div class="kcb"><span id="kcb1">0:00</span><div id="kcbg" role="slider" aria-label="Posición" tabindex="-1"><i id="kcbi"></i></div><span id="kcb2">0:00</span></div><b id="kcvt"></b><span id="kcva"></span></div>
   <div id="kcp" hidden role="dialog" aria-label="Portada"></div>
+  <div id="kq" hidden role="dialog" aria-label="Cola de reproducción"><div class="kqhd"><b>Cola de reproducción</b><button id="kqx" aria-label="Cerrar la cola">✕</button></div><div class="kqnow"><small>Suena ahora</small><div id="kqn">—</div></div><div class="kqhd2"><small id="kqt">A continuación</small><span><button id="kqsh" title="Mezclar lo que queda de la cola">🔀 Mezclar</button><button id="kqre" title="Armar la cola de nuevo con todas las canciones">↺ Rehacer</button></span></div><ol id="kql"></ol><div class="kqad"><select id="kqa" aria-label="Canción para agregar"></select><button id="kqnx">A continuación</button><button id="kqad">Al final</button></div></div>
   <div class="kpt"><b id="kpn"></b><span class="sep"></span>
     <label>Estilo <select id="kps"><option value="full">Completo</option><option value="simple">Simple</option><option value="minimal">Mínimo</option></select></label>
     <button class="kjoff" id="kje" title="Convierte esta vista previa en un reproductor karaoke con todos tus proyectos">🎤 Reproductor</button>
-    <label class="kjonly">Canción <select id="kjs"></select></label><button class="kjonly" id="kjp" title="Canción anterior">⏮</button><button class="kjonly" id="kjn" title="Canción siguiente">⏭</button><label class="kjonly"><input id="kjr" type="checkbox" checked> Aleatorio</label><label class="kjonly"><input id="kja" type="checkbox" checked> Pasar sola a la siguiente</label>
+    <label class="kjonly">Canción <select id="kjs"></select></label><button class="kjonly" id="kjp" title="Canción anterior">⏮</button><button class="kjonly" id="kjn" title="Canción siguiente">⏭</button><label class="kjonly"><input id="kjr" type="checkbox" checked> Aleatorio</label><button class="kjonly" id="kqb" aria-expanded="false" aria-controls="kq" title="Ver y editar la cola de reproducción">☰ Cola</button><label class="kjonly"><input id="kja" type="checkbox" checked> Pasar sola a la siguiente</label>
     <label><input id="kpc" type="checkbox"> Acordes</label>
     <label>Velocidad <select id="kpv"><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1× (normal)</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></label>
     <label>Audio <select id="kpa"><option value="full">Canción</option><option value="voice">Solo voz</option><option value="karaoke">Solo música</option></select></label>
@@ -1608,7 +1629,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.56',PK='lyricsync_projects';
+const APP_VERSION='3.58',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3101,7 +3122,7 @@ addEventListener('resize',()=>{if(!$('kp').hidden)kpMeasure()});
 
 
 /* ===== Reproductor karaoke: recorre tus proyectos solo para reproducir (sin editar) ===== */
-const kj={adv:false,on:false,back:null,cur:null,mode:'full',tok:0,hist:[]};
+const kj={q:null,qc:false,adv:false,on:false,back:null,cur:null,mode:'full',tok:0,hist:[]};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function kjList(){
   return Object.keys(PR.list).filter(id=>{const p=PR.list[id];return p&&p.asv&&Array.isArray(p.L)&&p.L.some(l=>l.w&&l.w.some(x=>x.s!=null))}).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
@@ -3116,7 +3137,7 @@ async function kjStart(first){
   const ids=kjList();
   if(!ids.length){note('Para usar el reproductor hace falta al menos un proyecto con audio guardado y letra con tiempos.');return}
   if(typeof sync!=='undefined'&&sync)$('sy').click();
-  kj.on=true;kj.back=PR.cur;kj.hist=[];kj.mode='full';kj.cur=null;
+  kj.on=true;kj.back=PR.cur;kj.hist=[];kj.q=null;kj.qc=false;kj.mode='full';kj.cur=null;
   $('kp').classList.add('kj');
   const id=first&&ids.includes(first)?first:ids[Math.floor(Math.random()*ids.length)];
   await kjPlay(id);
@@ -3125,7 +3146,10 @@ async function kjPlay(id,fromHist){
   if(!kj.on||!PR.list[id])return;
   const tok=++kj.tok;
   if(kj.cur&&!fromHist&&kj.cur!==id)kj.hist.push(kj.cur);
-  kj.cur=id;kjFill();
+  if(kj.q&&fromHist&&kj.cur&&kj.cur!==id)kj.q.unshift(kj.cur);
+  if(kj.q)kj.q=kj.q.filter(x=>x!==id);
+  if(!kj.qc&&!$('kjr').checked)kj.q=null;else if(!kj.q)kj.q=kjQBuild(false).filter(x=>x!==id);
+  kj.cur=id;kjFill();kjQRender();try{rmtPush(true)}catch(e){}
   try{a.pause()}catch(e){}
   kp.vplay=false;
   $('kpn').textContent='Cargando «'+PR.list[id].name+'»…';
@@ -3147,7 +3171,7 @@ function kjEnter(){
   if(kj.on)return;
   if(PR.cur&&PR.list[PR.cur])save();
   if(!kjList().length&&!PR.cur){note('Para usar el reproductor hace falta al menos un proyecto con audio guardado y letra con tiempos.');return}
-  kj.on=true;kj.back=PR.cur;kj.cur=PR.cur;kj.hist=[];kj.mode=audioMode;kj.adv=false;
+  kj.on=true;kj.back=PR.cur;kj.cur=PR.cur;kj.hist=[];kj.q=null;kj.qc=false;kj.mode=audioMode;kj.adv=false;
   $('kp').classList.add('kj');kjFill();
   note('Reproductor karaoke: elegí otra canción arriba o dejá que pase sola.');
 }
@@ -3158,19 +3182,82 @@ function kjCheckEnd(){
   kj.adv=true;const t=kj.tok;
   setTimeout(()=>{kj.adv=false;if(kj.on&&t===kj.tok&&$('kja').checked)kjNext()},1200);
 }
+/* Cola del reproductor (editable): kj.q = próximas canciones en orden; kj.qc = el usuario la modificó a mano */
+function kjShuf(o){for(let i=o.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[o[i],o[j]]=[o[j],o[i]]}return o}
+function kjQBuild(withCur){
+  const ids=kjList(),cur=kj.cur;
+  if($('kjr').checked){
+    const o=kjShuf(ids.filter(x=>withCur||x!==cur));
+    if(withCur&&o.length>1&&o[0]===cur){const j=1+Math.floor(Math.random()*(o.length-1));[o[0],o[j]]=[o[j],o[0]]}
+    return o;
+  }
+  const i=ids.indexOf(cur),o=i<0?ids.slice():ids.slice(i+1).concat(ids.slice(0,i));
+  return o.length||!withCur?o:ids.slice();
+}
+function kjQGet(){
+  const ids=kjList();
+  if(!kj.q){kj.q=kjQBuild(false);kj.qc=false}
+  kj.q=kj.q.filter((x,i,ar)=>PR.list[x]&&ar.indexOf(x)===i);
+  return kj.q;
+}
 function kjNext(){
   const ids=kjList();if(!ids.length)return;
-  let n;
-  if($('kjr').checked&&ids.length>1){const o=ids.filter(x=>x!==kj.cur);n=o[Math.floor(Math.random()*o.length)]}
-  else{const i=ids.indexOf(kj.cur);n=ids[(i+1)%ids.length]}
+  const q=kjQGet();
+  if(!q.length){kj.q=kjQBuild(true);kj.qc=false}
+  const n=kj.q.shift()||kj.cur;
   kjPlay(n);
 }
+/* operaciones de la cola: mv (mover a la posición «to»), rm, add (al final), next (a continuación), shuf (mezclar lo que queda), reset (rehacer) */
+function kjQOp(op,id,to){
+  if(!kj.on){if(!kjList().length&&!PR.cur)return;kjEnter();if(!kj.on)return}
+  const q=kjQGet();
+  if(op==='rnd'){$('kjr').checked=!$('kjr').checked;$('kjr').dispatchEvent(new Event('change'));return}
+  if(op==='reset'){kj.q=null;kj.qc=false;kjQGet()}
+  else if(op==='shuf'){kjShuf(q);kj.qc=true}
+  else if(op==='play'){if(PR.list[id])kjPlay(id)}
+  else if(PR.list[id]){
+    const i=q.indexOf(id);if(i>=0)q.splice(i,1);
+    if(op==='mv'){q.splice(Math.max(0,Math.min(q.length,to|0)),0,id);kj.qc=true}
+    else if(op==='add'){q.push(id);kj.qc=true}
+    else if(op==='next'){q.unshift(id);kj.qc=true}
+    else if(op==='rm'){kj.qc=true}
+  }
+  kjQRender();try{rmtPush(true)}catch(e){}
+}
+function kjQRender(){
+  const box=$('kq');if(!box||box.hidden)return;
+  const q=kj.on?kjQGet():[],cur=PR.list[kj.cur];
+  const sel=$('kqa'),all=kjList().filter(x=>!q.includes(x));
+  sel.innerHTML=all.map(id=>'<option value="'+id+'">'+X(PR.list[id].name||'Sin nombre')+(id===kj.cur?' (suena ahora)':'')+'</option>').join('');
+  $('kqn').textContent=cur?cur.name||'Sin nombre':'—';
+  $('kqt').textContent=q.length?'A continuación · '+q.length:'A continuación';
+  $('kql').innerHTML=q.length?q.map((id,i)=>'<li draggable="true" data-id="'+id+'" data-i="'+i+'"><span class="kqh" aria-hidden="true">⠿</span><span class="kqs">'+X(PR.list[id].name||'Sin nombre')+'</span><button data-op="play" title="Reproducir ahora" aria-label="Reproducir ahora">▶</button><button data-op="up" title="Subir" aria-label="Subir"'+(i?'':' disabled')+'>▲</button><button data-op="dn" title="Bajar" aria-label="Bajar"'+(i<q.length-1?'':' disabled')+'>▼</button><button data-op="rm" title="Quitar de la cola" aria-label="Quitar de la cola">✕</button></li>').join(''):'<li class="kqe">La cola está vacía: al terminar la canción se arma otra con todas las canciones.</li>';
+}
+(function(){
+  const box=()=>$('kq');
+  $('kqb').onclick=()=>{const b=box();b.hidden=!b.hidden;$('kqb').setAttribute('aria-expanded',String(!b.hidden));if(!b.hidden){$('kcp').hidden=true;kjQRender()}};
+  $('kqx').onclick=()=>{box().hidden=true;$('kqb').setAttribute('aria-expanded','false')};
+  $('kql').onclick=e=>{
+    const b=e.target.closest('button[data-op]'),li=b&&b.closest('li');if(!li)return;
+    const id=li.dataset.id,i=+li.dataset.i,op=b.dataset.op;
+    if(op==='up')kjQOp('mv',id,i-1);else if(op==='dn')kjQOp('mv',id,i+1);else kjQOp(op,id);
+  };
+  let drag=null;
+  $('kql').addEventListener('dragstart',e=>{const li=e.target.closest('li[data-id]');if(!li)return;drag=li.dataset.id;li.classList.add('dg');try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',drag)}catch(x){}});
+  $('kql').addEventListener('dragend',()=>{drag=null;$('kql').querySelectorAll('.dg,.ov').forEach(x=>x.classList.remove('dg','ov'))});
+  $('kql').addEventListener('dragover',e=>{if(!drag)return;e.preventDefault();$('kql').querySelectorAll('.ov').forEach(x=>x.classList.remove('ov'));const li=e.target.closest('li[data-id]');if(li)li.classList.add('ov')});
+  $('kql').addEventListener('drop',e=>{if(!drag)return;e.preventDefault();const li=e.target.closest('li[data-id]'),id=drag;drag=null;if(li&&li.dataset.id!==id)kjQOp('mv',id,+li.dataset.i)});
+  $('kqad').onclick=()=>{const v=$('kqa').value;if(v)kjQOp('add',v)};
+  $('kqnx').onclick=()=>{const v=$('kqa').value;if(v)kjQOp('next',v)};
+  $('kqsh').onclick=()=>kjQOp('shuf');
+  $('kqre').onclick=()=>kjQOp('reset');
+})();
 function kjPrev(){
   if(kj.hist.length){kjPlay(kj.hist.pop(),true)}
   else{try{a.currentTime=0}catch(e){}}
 }
 function kjExit(){
-  kj.on=false;kj.tok++;try{a.pause()}catch(e){}kpRestoreRate();
+  kj.on=false;kj.tok++;kj.q=null;kj.qc=false;$('kq').hidden=true;try{a.pause()}catch(e){}kpRestoreRate();
   $('kp').classList.remove('kj');kpClose();
   kj.back=null; // se queda abierto el proyecto de la vista previa (el que estaba sonando), no el anterior
   if(PR.cur&&PR.list[PR.cur])pjUI();
@@ -3182,6 +3269,7 @@ $('kje').onclick=kjEnter;
 $('kjc').onclick=()=>kjStart(PR.cur);
 $('pkkj').onclick=()=>kjStart();
 $('kjn').onclick=kjNext;$('kjp').onclick=()=>rmtSong(-1);
+$('kjr').addEventListener('change',()=>{kj.q=null;kj.qc=false;if(kj.on)kjQGet();kjQRender();try{rmtPush(true)}catch(e){}});
 $('kjs').onchange=()=>kjPlay($('kjs').value);
 a.addEventListener('ended',kjCheckEnd);
 
@@ -3779,7 +3867,7 @@ async function kcvSet(file){
    ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>g.addEventListener(ev,()=>{dn=false;g.classList.remove('dn')}));
    g.setAttribute('tabindex','0');g.addEventListener('keydown',e=>{const k=e.key==='ArrowRight'?5:e.key==='ArrowLeft'?-5:0;if(k){kpSeek(kpT()+k);e.preventDefault()}})}
   $('kcx').onclick=async()=>{if(PR.cur){try{await adbDel(coverKey(PR.cur));await adbDel('cover:'+PR.cur)}catch(e){}await kpCover();rmtPush(true);note('Portada quitada.')}};
-  $('kpcv').onclick=e=>{e.stopPropagation();m.hidden=!m.hidden;if(!m.hidden){$('kthm').hidden=true;$('kfm').hidden=true;kcvApply()}};
+  $('kpcv').onclick=e=>{e.stopPropagation();m.hidden=!m.hidden;if(!m.hidden){$('kq').hidden=true;$('kthm').hidden=true;$('kfm').hidden=true;kcvApply()}};
   $('kpth').addEventListener('click',()=>{if(!$('kthm').hidden)m.hidden=true});
   $('kpaa').addEventListener('click',()=>{if(!$('kfm').hidden)m.hidden=true});
   $('kp').addEventListener('click',e=>{if(!m.hidden&&!m.contains(e.target)&&e.target!==$('kpcv'))m.hidden=true});
@@ -3986,7 +4074,7 @@ function rmtState(full){
 function rmtExtras(){
   if(PR.cur!==kcvFor&&!kcvBusy&&PR.cur)kpCover().catch(()=>{});
   const ids=kjList();if(PR.cur&&PR.list[PR.cur]&&!ids.includes(PR.cur))ids.unshift(PR.cur);
-  return{lst:ids.filter(id=>PR.list[id]).map(id=>[id,PR.list[id].name||'Sin nombre',(PR.list[id].stm||0)>=2?1:0,projAlbum(id)]),ck:PR.cur===kcvFor?(kcvFor+':'+kcvThumb.length):'',cv:PR.cur!==kcvFor||!kcvThumb?'':(rmt.ck===kcvFor+':'+kcvThumb.length?undefined:kcvThumb),cl:PR.cur===kcvFor&&kcvCols?kcvCols[0]:null,kj:!!kj.on}
+  return{lst:ids.filter(id=>PR.list[id]).map(id=>[id,PR.list[id].name||'Sin nombre',(PR.list[id].stm||0)>=2?1:0,projAlbum(id)]),ck:PR.cur===kcvFor?(kcvFor+':'+kcvThumb.length):'',cv:PR.cur!==kcvFor||!kcvThumb?'':(rmt.ck===kcvFor+':'+kcvThumb.length?undefined:kcvThumb),cl:PR.cur===kcvFor&&kcvCols?kcvCols[0]:null,kj:!!kj.on,q:kj.on?kjQGet().map(id=>[id,PR.list[id].name||'Sin nombre']):null,sh:!!$('kjr').checked}
 }
 /* Anterior/siguiente como en Spotify: «anterior» vuelve al principio si ya pasaron 3 s, y si no, va a la canción anterior */
 function rmtSong(dir){
@@ -4028,6 +4116,7 @@ function rmtCmd(m){
       setTimeout(()=>{if($('kp').classList.contains('imm')&&!document.fullscreenElement)rmtArmFs()},350);break;
     case'exit':kpImm(false);break;
     case'close':if(!$('kp').hidden)kpClose();break;
+    case'q':kjQOp(String(m.op||''),m.v,m.to);break;
     case'song':if(PR.list[m.v]){if(kj.on)kjPlay(m.v);else kjStart(m.v)}break;
   }
   setTimeout(rmtPush,60);
@@ -4108,7 +4197,7 @@ if(RMT_REMOTE){
   const pk=$('pk');if(pk)pk.hidden=true;
   const ui=document.createElement('div');ui.id='rmt';
   ui.innerHTML='<div class="rhd"><b>🎤 Lyric Sync</b><span class="rdot" id="rcn">sin conexión</span><button id="rrl" class="rrl" aria-label="Recargar la página (la conexión se recupera sola)" title="Recargar la página: la conexión con la computadora se recupera sola">↻</button></div>'
-   +'<div class="rtabs" role="tablist"><button role="tab" id="rt1" aria-selected="true">Reproduciendo</button><button role="tab" id="rt2" aria-selected="false">Canciones</button></div>'
+   +'<div class="rtabs" role="tablist"><button role="tab" id="rt1" aria-selected="true">Reproduciendo</button><button role="tab" id="rt3" aria-selected="false">Cola</button><button role="tab" id="rt2" aria-selected="false">Canciones</button></div>'
    +'<div class="rv" id="rv1">'
    +'<div class="rart" id="rart">♪</div>'
    +'<div><div class="rtt" id="rti">—</div><div class="rl" id="rll" aria-live="polite"></div></div>'
@@ -4119,6 +4208,7 @@ if(RMT_REMOTE){
    +'<div class="chips"><button id="rkp">🎬 Vista previa</button><button id="rfs">⛶ Pantalla completa</button><button id="rex">↙ Salir de pantalla completa</button><button id="rcl">✕ Cerrar vista previa</button></div><div class="cn" id="rfh" hidden>La pantalla ya está limpia, pero el navegador no deja ocultar también su barra desde el celular. Tocá una vez la pantalla de la computadora (o apretá una tecla) y queda en pantalla completa total.</div>'
    +'<div class="rrt"><span>Velocidad</span><select id="rrt" aria-label="Velocidad"><option value="0.5">0,5×</option><option value="0.75">0,75×</option><option value="1" selected>1×</option><option value="1.25">1,25×</option><option value="1.5">1,5×</option><option value="2">2×</option></select></div>'
    +'<details id="rcd"><summary>Conectar desde el celular</summary><p class="cn">Pegá el código que te dio la computadora, tocá «Generar respuesta» y copiá el resultado de vuelta en la computadora.</p><div class="row"><button id="rsc" type="button" hidden>📷 Escanear el QR de la computadora</button></div><textarea id="rof" placeholder="Código de la computadora" aria-label="Código de la computadora"></textarea><div class="row"><button id="rgr" class="pri">Generar respuesta</button></div><div id="rrq" hidden style="line-height:0;margin:8px 0"></div><p class="cn" id="rrh" hidden>Ahora mostrale este QR a la computadora (botón «Escanear la respuesta») o copiá el código y pegalo allá.</p><textarea id="rar" readonly placeholder="Código de respuesta" aria-label="Código de respuesta" hidden></textarea><div class="row"><button id="rcc" hidden>Copiar respuesta</button></div></details></div>'
+   +'<div class="rv" id="rv3" hidden><div class="rqnow"><small>Suena ahora</small><div id="rqn">—</div></div><div class="rqbar"><button id="rqsh" aria-pressed="true">🔀 Aleatorio</button><button id="rqms">Mezclar cola</button><button id="rqre">↺ Rehacer</button></div><div class="rqt" id="rqt">A continuación</div><div class="rq3" id="rql" role="list"></div><details id="rqd"><summary>Agregar canciones a la cola</summary><div class="rls" id="rqa" role="list"></div></details></div>'
    +'<div class="rv" id="rv2" hidden><input class="rsrch" id="rq" type="search" placeholder="Buscar canción…" aria-label="Buscar canción"><div class="rls" id="rls" role="list"></div></div>';
   document.body.appendChild(ui);
   const fmt=t=>{t=Math.max(0,t|0);return(t/60|0)+':'+('0'+t%60).slice(-2)};
@@ -4152,13 +4242,30 @@ if(RMT_REMOTE){
       else if(m.ex.cv===''&&$('rart').dataset.s){$('rart').dataset.s='';$('rart').dataset.k='';$('rart').textContent='♪'}
       rcol(m.ex.cl);
       const sig=JSON.stringify(m.ex.lst);if(sig!==lastLst){lastLst=sig;ui._lst=m.ex.lst;rlist()}
+      ui._q=m.ex.q;ui._sh=m.ex.sh;if(!$('rv3').hidden)ui._rq();
     }
     ui._dur=m.dur;
   };
   $('rq').oninput=rlist;
   $('rls').onclick=e=>{const b=e.target.closest('[data-id]');if(!b)return;out({c:'song',v:b.dataset.id});$('rt1').click()};
-  const tab=n=>{$('rv1').hidden=n!==1;$('rv2').hidden=n!==2;$('rt1').setAttribute('aria-selected',n===1);$('rt2').setAttribute('aria-selected',n===2)};
-  $('rt1').onclick=()=>tab(1);$('rt2').onclick=()=>{tab(2);rlist()};
+  const tab=n=>{$('rv1').hidden=n!==1;$('rv2').hidden=n!==2;$('rv3').hidden=n!==3;$('rt1').setAttribute('aria-selected',n===1);$('rt2').setAttribute('aria-selected',n===2);$('rt3').setAttribute('aria-selected',n===3)};
+  $('rt1').onclick=()=>tab(1);$('rt2').onclick=()=>{tab(2);rlist()};$('rt3').onclick=()=>{tab(3);rqueue()};
+  const rqueue=()=>{
+    const m=ui._last||{},q=ui._q||null,ls=ui._lst||[];
+    $('rqn').textContent=m.title||'—';$('rqsh').setAttribute('aria-pressed',String(ui._sh!==false));
+    $('rqt').textContent=q===null?'Todavía no empezó el reproductor':'A continuación'+(q.length?' · '+q.length:'');
+    $('rql').innerHTML=q===null?'<p class="cn">Tocá cualquier canción o agregá una a la cola: el reproductor empieza solo.</p>':q.length?q.map((x,i)=>'<div class="rqi" role="listitem" data-id="'+x[0]+'" data-i="'+i+'"><span>'+X(x[1])+'</span><button data-op="play" aria-label="Reproducir ahora">▶</button><button data-op="up" aria-label="Subir"'+(i?'':' disabled')+'>▲</button><button data-op="dn" aria-label="Bajar"'+(i<q.length-1?'':' disabled')+'>▼</button><button data-op="rm" aria-label="Quitar de la cola">✕</button></div>').join(''):'<p class="cn">La cola está vacía: al terminar la canción se arma otra con todas.</p>';
+    const inq=new Set((q||[]).map(x=>x[0]));
+    $('rqa').innerHTML=ls.filter(x=>!inq.has(x[0])).map(x=>'<div class="rqi" data-id="'+x[0]+'"><span>'+X(x[1])+(x[0]===curId?' · suena':'')+'</span><button data-op="next" aria-label="Poner a continuación">⤒ Sigue</button><button data-op="add" aria-label="Agregar al final">＋ Final</button></div>').join('')||'<p class="cn">Todas las canciones ya están en la cola.</p>';
+  };
+  ui._rq=rqueue;
+  $('rv3').onclick=e=>{
+    const b=e.target.closest('button[data-op]'),r=b&&b.closest('[data-id]');if(!r)return;
+    const id=r.dataset.id,i=+r.dataset.i,op=b.dataset.op;
+    if(op==='up')out({c:'q',op:'mv',v:id,to:i-1});else if(op==='dn')out({c:'q',op:'mv',v:id,to:i+1});else out({c:'q',op,v:id});
+  };
+  $('rqms').onclick=()=>out({c:'q',op:'shuf'});$('rqre').onclick=()=>out({c:'q',op:'reset'});
+  $('rqsh').onclick=()=>out({c:'q',op:'rnd'});
   rmt.bc=window.BroadcastChannel?new BroadcastChannel('lyricsync-remote'):null;
   if(rmt.bc)rmt.bc.onmessage=e=>{if(!window.opener)rmtUiMsg(e.data)};
   addEventListener('message',e=>{const d=e.data;if(d&&d.ls&&d.m&&e.source===window.opener)rmtUiMsg(d.m)});
