@@ -389,6 +389,9 @@ button,.btn,select{touch-action:manipulation}
 .kl:hover{opacity:1;--BlurAmount:0px!important}
 .kl.bg{font-size:calc(var(--DefaultLyricsSize)*.75);font-weight:calc(var(--kfw,700) - 100);margin:-1cqw 0 1cqw;--ga:.6;--gae:.3}
 .kw,.kx{--gp:-20%;display:inline-block;position:relative;padding:.14em .08em .26em;margin:-.14em -.08em -.26em;scale:.95;transform:translate3d(0,.01em,0);transform-origin:center center;background-image:linear-gradient(90deg,rgba(255,255,255,var(--ga)) var(--gp),rgba(255,255,255,var(--gae)) calc(var(--gp) + 20%));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+/* sin cursor de texto al hacer clic (Chrome lo muestra si está activada la «navegación con cursor», tecla F7) */
+html{caret-color:transparent}input,textarea,select,[contenteditable=true]{caret-color:auto}
+#kp,#rmt{-webkit-user-select:none;user-select:none}#kp input,#kp textarea,#rmt input,#rmt textarea{-webkit-user-select:text;user-select:text}
 .fcol .kw,.fcol .kx{background-image:none;-webkit-background-clip:border-box;background-clip:border-box;color:#fff;-webkit-text-fill-color:#fff;text-shadow:none!important;-webkit-mask-image:linear-gradient(90deg,#000 var(--gp),rgba(0,0,0,.45) calc(var(--gp) + 20%));mask-image:linear-gradient(90deg,#000 var(--gp),rgba(0,0,0,.45) calc(var(--gp) + 20%))}
 .fcol .kl:not(.now) .kw,.fcol .kl:not(.now) .kx,.fcol .kl.past .kw,.fcol .kl.past .kx,.fcol .kw.lg{-webkit-mask-image:none;mask-image:none;text-shadow:none!important}
 .kfcl span{display:flex;gap:8px;align-items:center}
@@ -1632,7 +1635,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.60',PK='lyricsync_projects';
+const APP_VERSION='3.61',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3676,6 +3679,7 @@ function hkNav(dir){
   else{let c=-1;st.forEach((x,i)=>{if(x<=t-1.2)c=i});go(c>=0?st[c]:0)}
 }
 addEventListener('keydown',e=>{
+  if(e.key==='F7'&&!e.altKey&&!e.ctrlKey&&!e.metaKey){e.preventDefault();return} // evita activar la navegación con cursor sin querer
   if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey)return;
   const m={F9:hkToggle,F11:()=>rmtSong(-1),F12:()=>rmtSong(1)}[e.key];if(!m)return;
   e.preventDefault();e.stopPropagation();if(!e.repeat)m();
