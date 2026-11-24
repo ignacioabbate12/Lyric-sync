@@ -272,7 +272,7 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kcp .btn{justify-content:center;border:1px solid rgba(255,255,255,.3);color:#fff;background:rgba(255,255,255,.1)}#kcp .ck{display:flex;gap:8px;align-items:flex-start}
 #kfm .btn{background:rgba(255,255,255,.1)}#kcp .rs,#kfm .btn,#kfm .rq{color:#fff;border:1px solid rgba(255,255,255,.25);justify-content:center;font-size:12px;padding:6px 12px}
 #kcp p{margin:0;opacity:.7;font-size:12px}
-#kfm label.btn{display:inline-flex;grid-template-columns:none}#kfm .fr{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px}
+#kfm label.kfcl{display:block}#kfm label.btn{display:inline-flex;grid-template-columns:none}#kfm .fr{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px}
 #kp.imm #kcp,#kp.imm #kq{display:none!important}
 .kpt #kqb{width:auto;min-width:0;border-radius:99px;padding:0 16px;white-space:nowrap;height:40px}
 #kq{position:absolute;z-index:8;top:64px;right:12px;width:min(360px,calc(100vw - 24px));max-height:calc(100% - 100px);overflow:auto;background:rgba(18,22,21,.97);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font-size:13px;color:#fff}
@@ -389,6 +389,9 @@ button,.btn,select{touch-action:manipulation}
 .kl:hover{opacity:1;--BlurAmount:0px!important}
 .kl.bg{font-size:calc(var(--DefaultLyricsSize)*.75);font-weight:calc(var(--kfw,700) - 100);margin:-1cqw 0 1cqw;--ga:.6;--gae:.3}
 .kw,.kx{--gp:-20%;display:inline-block;position:relative;padding:.14em .08em .26em;margin:-.14em -.08em -.26em;scale:.95;transform:translate3d(0,.01em,0);transform-origin:center center;background-image:linear-gradient(90deg,rgba(255,255,255,var(--ga)) var(--gp),rgba(255,255,255,var(--gae)) calc(var(--gp) + 20%));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.fcol .kw,.fcol .kx{background-image:none;-webkit-background-clip:border-box;background-clip:border-box;color:#fff;-webkit-text-fill-color:#fff;text-shadow:none!important;-webkit-mask-image:linear-gradient(90deg,#000 var(--gp),rgba(0,0,0,.45) calc(var(--gp) + 20%));mask-image:linear-gradient(90deg,#000 var(--gp),rgba(0,0,0,.45) calc(var(--gp) + 20%))}
+.fcol .kl:not(.now) .kw,.fcol .kl:not(.now) .kx,.fcol .kl.past .kw,.fcol .kl.past .kx,.fcol .kw.lg{-webkit-mask-image:none;mask-image:none;text-shadow:none!important}
+.kfcl span{display:flex;gap:8px;align-items:center}
 .kw:not(.pow):not(.lastw)::after{content:"";margin-right:.32ch}
 .kw.pow{transform-origin:right center}
 .kw.lg{display:inline-flex;scale:1;transform:none;background-image:none}
@@ -1629,7 +1632,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.59',PK='lyricsync_projects';
+const APP_VERSION='3.60',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3727,7 +3730,7 @@ const KFONTS=[
  ['dis','Impacto (titulares)','Impact,Haettenschweiler,"Arial Black","Franklin Gothic Heavy",sans-serif'],
  ['leg','Alta legibilidad','Verdana,Tahoma,"Atkinson Hyperlegible",system-ui,sans-serif']
 ];
-const KTY_DEF={f:'sys',z:100,w:700,l:118,a:'l'};
+const KTY_DEF={f:'sys',z:100,w:700,l:118,a:'l',c:false};
 function kpTypo(o){
   const t=Object.assign({},KTY_DEF,getMeta().kty||{},o||{}),el=$('kp');
   t.z=Math.max(60,Math.min(170,+t.z||100));t.w=[500,600,700,800,900].includes(+t.w)?+t.w:700;t.l=Math.max(100,Math.min(160,+t.l||118));t.a=['l','c','r'].includes(t.a)?t.a:'l';
@@ -3735,9 +3738,10 @@ function kpTypo(o){
   el.style.setProperty('--kff',f[2]);el.style.setProperty('--kfs',t.z/100);el.style.setProperty('--kfw',t.w);el.style.setProperty('--kfl',t.l/100);
   const al={l:['flex-start','start','left center','0'],c:['center','center','center center','5cqw'],r:['flex-end','end','right center','0']}[t.a];
   el.style.setProperty('--kja',al[0]);el.style.setProperty('--kta',al[1]);el.style.setProperty('--kto',al[2]);el.style.setProperty('--kpl',al[3]);
+  t.c=!!t.c;el.classList.toggle('fcol',t.c);
   if(o)setMeta({kty:t});
   const m=$('kfm');
-  if(m.firstChild){$('kfz').value=t.z;$('kfzo').textContent=t.z+'%';$('kfl').value=t.l;$('kflo').textContent=(t.l/100).toFixed(2);$('kff').value=t.f;$('kfw').value=t.w;
+  if(m.firstChild){$('kfz').value=t.z;$('kfzo').textContent=t.z+'%';$('kfl').value=t.l;$('kflo').textContent=(t.l/100).toFixed(2);$('kff').value=t.f;$('kfw').value=t.w;$('kfc').checked=t.c;
     m.querySelectorAll('[data-al]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.al===t.a?'true':'false'))}
   if(o&&!$('kp').hidden){setTimeout(()=>{kpMeasure&&kpMeasure();kp.ft=0},30)}
 }
@@ -3748,7 +3752,9 @@ function kpTypo(o){
    +'<label>Grosor<select id="kfw"><option value="500">Medio</option><option value="600">Seminegrita</option><option value="700">Negrita</option><option value="800">Extra negrita</option><option value="900">Máxima</option></select></label>'
    +'<label>Interlineado<input id="kfl" type="range" min="100" max="160" step="2"><output id="kflo"></output></label>'
    +'<label>Alineación<span class="al"><button type="button" data-al="l" aria-label="Izquierda">⇤ Izq.</button><button type="button" data-al="c" aria-label="Centrada">≡ Centro</button><button type="button" data-al="r" aria-label="Derecha">⇥ Der.</button></span></label>'
+   +'<label class="kfcl" title="Para fuentes que traen colores (emoji, fuentes COLR/SVG/bitmap): muestra la letra con sus colores en vez de todo blanco"><span><input id="kfc" type="checkbox"> Mostrar la fuente a color</span></label>'
    +'<button type="button" class="rs" id="kfr">Restablecer</button>';
+  $('kfc').onchange=()=>kpTypo({c:$('kfc').checked});
   $('kff').onchange=()=>kpTypo({f:$('kff').value});
   $('kfw').onchange=()=>kpTypo({w:+$('kfw').value});
   $('kfz').oninput=()=>kpTypo({z:+$('kfz').value});
