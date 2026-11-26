@@ -690,7 +690,7 @@ main details.tp>summary{font-weight:700;margin-bottom:6px}
   <li><b>Deshacer / Rehacer</b> (<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd>) vuelven atrás cualquier cambio. <b>Quitar marca</b> (<kbd>⌫</kbd>) solo borra la última marca de sincronización.</li>
   <li><b>Onda:</b> muestra el audio con las palabras encima y el tiempo exacto (con milisegundos) de la reproducción y del cursor. Tocá una palabra para ajustarla: botones de ±1 y ±10 ms o escribiendo el tiempo. También podés arrastrar sus bordes (se pegan a los golpes de voz; con <kbd>Alt</kbd> no). En cada línea, <b>− / +</b> la adelantan o atrasan en el «Paso» elegido (con <kbd>Shift</kbd>, desde esa línea hasta el final).</li>
   <li><b>Avisos</b> te señala palabras fuera de orden, líneas que se pisan o duraciones raras. Tocá un aviso para ir a ese lugar.</li>
-  <li><b>Proyectos y guardado:</b> al entrar elegís el proyecto. Todo se guarda solo en este navegador, incluido el audio de cada proyecto (se carga solo al abrirlo; el respaldo no lo incluye) (el botón <b>Guardar</b> o <kbd>Ctrl</kbd>+<kbd>S</kbd> lo fuerza). Los cambios de una casilla se guardan al salir de ella. Antes de actualizar o cambiar de navegador, usá <b>Exportar respaldo</b>. Para instalarla como app hace falta abrirla desde una dirección web (mirá el LEEME del paquete).</li>
+  <li><b>Proyectos y guardado:</b> al entrar elegís el proyecto. Todo se guarda solo en este navegador, incluido el audio de cada proyecto (se carga solo al abrirlo; el respaldo lo incluye junto con las portadas) (el botón <b>Guardar</b> o <kbd>Ctrl</kbd>+<kbd>S</kbd> lo fuerza). Los cambios de una casilla se guardan al salir de ella. Antes de actualizar o cambiar de navegador, usá <b>Exportar respaldo</b>. Para instalarla como app hace falta abrirla desde una dirección web (mirá el LEEME del paquete).</li>
   <li><b>Mantener presionado</b> (botón de la barra, apagado por defecto): con él activo, la tecla o el botón de marcar funcionan como «mantener»: al apretar marcas el inicio de la palabra y al soltar marcas su fin.</li>
   <li><b>Líneas:</b> cada línea tiene <b>Dividir</b> (después tocá la palabra donde empieza la línea nueva), <b>Unir ↑</b> (la suma a la anterior) y <b>＋↑ / ＋↓</b> (línea nueva arriba o abajo, sin tocar las demás; escribí varias palabras separadas por espacio y se reparten solas). Abajo hay «Agregar línea al final».</li>
   <li><b>Vista previa:</b> imita el estilo de Spicy Lyrics con los valores de su código (relleno de cada palabra, efecto por letra en las palabras de 1 s o más, brillo, desenfoque según la distancia, puntos en las pausas largas y fondo animado). Tiene tres estilos y se puede apagar el desenfoque. Clic en una línea para ir a ella. Sin audio, tiene un play de prueba.</li>
@@ -722,24 +722,6 @@ main details.tp>summary{font-weight:700;margin-bottom:6px}
   <div class="row" id="rmor" hidden><button id="rmc">Copiar código</button><button id="rml">Copiar enlace</button></div>
   <textarea id="rma" placeholder="Pegá acá el código de respuesta del celular" aria-label="Código de respuesta" hidden></textarea>
   <div class="row" id="rmar" hidden><button id="rmk" class="pri">Conectar</button><button id="rmsc" hidden>📷 Escanear la respuesta del celular</button></div>
-</details>
-<details id="cld" class="tp"><summary>☁️ Nube (Google Drive)</summary>
-  <p class="mu" style="margin:8px 0">Guarda tus proyectos —letra, tiempos, audio y portadas— en tu Google Drive y los tenés en todos tus dispositivos con la misma cuenta (computadoras, celulares y tablets). Usa una carpeta privada de la app: no aparece en tu Drive y nadie más la ve.</p>
-  <div class="row"><label>ID de cliente de Google <input id="clid" type="text" autocomplete="off" spellcheck="false" placeholder="123456789-abc.apps.googleusercontent.com" style="min-width:min(100%,340px)"></label><button id="clsave">Guardar ID</button></div>
-  <div class="row"><button id="clcon" class="pri">Conectar con Google</button><button id="clnow" disabled>Sincronizar ahora</button><button id="clout" disabled>Desconectar</button></div>
-  <div class="pbar" style="margin-top:12px"><i id="clb"></i></div>
-  <p id="cls" class="mu" role="status" style="margin:8px 0 0"></p>
-  <p class="mu" style="font-size:13px;margin:10px 0 0"><b>Se sincroniza:</b> proyectos, letra y tiempos, audio, portadas, álbum y artista. <b>No se sincroniza:</b> voz separada, versiones guardadas y fuentes tipográficas (son pesadas o se regeneran en cada dispositivo). Se guarda sola unos segundos después de cada cambio y al abrir la app. El proyecto que tenés abierto en otro dispositivo se actualiza cuando lo cerrás.</p>
-  <details style="margin:12px 0 0"><summary>Cómo conseguir el ID de cliente (una sola vez, gratis)</summary>
-    <ol style="font-size:13.5px">
-      <li>Entrá a <b>console.cloud.google.com</b> con tu cuenta de Google y creá un proyecto nuevo (por ejemplo «Lyric Sync»).</li>
-      <li>Menú ☰ → <b>APIs y servicios → Biblioteca</b>, buscá <b>Google Drive API</b> y tocá <b>Habilitar</b>.</li>
-      <li><b>APIs y servicios → Pantalla de consentimiento de OAuth</b> (o «Google Auth Platform»): tipo <b>Externo</b>, poné un nombre y tu correo. En permisos agregá <b>.../auth/drive.appdata</b> (el que dice «ver y administrar sus propios datos de configuración en Drive»). Al final tocá <b>Publicar aplicación</b> («En producción»): así no te pide volver a iniciar sesión cada semana y no necesita verificación.</li>
-      <li><b>Credenciales → Crear credenciales → ID de cliente de OAuth</b>, tipo <b>Aplicación web</b>. En <b>Orígenes autorizados de JavaScript</b> agregá la dirección de esta app: <b id="clorg"></b> (sin nada después). Guardá.</li>
-      <li>Copiá el <b>ID de cliente</b>, pegalo arriba, tocá <b>Guardar ID</b> y después <b>Conectar con Google</b>. En cada dispositivo nuevo pegá el mismo ID y conectate con la misma cuenta.</li>
-    </ol>
-    <p class="mu" style="font-size:13px;margin:6px 0 0">La app tiene que abrirse desde una dirección <b>https://</b> (por ejemplo GitHub Pages) o <b>http://localhost</b>; si la abrís como archivo local, Google no deja iniciar sesión. Para borrar todo lo guardado en la nube: Google → Seguridad → Conexiones de terceros → Lyric Sync → Eliminar conexiones.</p>
-  </details>
 </details>
 <details id="vh" class="tp"><summary id="vhs">Versiones del proyecto</summary>
   <p class="mu" style="margin:0 0 8px">Guarda copias de la letra y sus tiempos para volver atrás cuando quieras. Se guardan solas antes de sincronizar automáticamente, antes de restaurar otra versión y cada 10 minutos si hubo cambios (las automáticas más viejas se borran solas; las que guardás vos, no). No incluyen el audio.</p>
@@ -1759,10 +1741,10 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.71',PK='lyricsync_projects';
+const APP_VERSION='3.72',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
-const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR))}catch(e){return false}try{cDirty()}catch(e){}return true};
+const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
 const curData=()=>({L,lang:$('lang').value,comp:$('comp').value,auto:auto(),follow});
 const hora=()=>new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 function save(force){
@@ -2051,7 +2033,7 @@ $('pjdup').onclick=async()=>{
 $('pjren').onclick=()=>{const p=PR.list[PR.cur],n=prompt('Nuevo nombre',p.name);if(n&&n.trim()){p.name=n.trim();savePR();pjUI()}};
 $('pjdel').onclick=()=>{
   const p=PR.list[PR.cur];if(!confirm('¿Borrar el proyecto «'+p.name+'»? No se puede deshacer.'))return;
-  cTomb(PR.cur);adbDel(PR.cur).catch(()=>{});adbDel('ver:'+PR.cur).catch(()=>{});adbDel('cover:'+PR.cur).catch(()=>{});adbDel('vocals:'+PR.cur).catch(()=>{});adbDel('inst:'+PR.cur).catch(()=>{});delete PR.list[PR.cur];PR.cur=null;const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
+  adbDel(PR.cur).catch(()=>{});adbDel('ver:'+PR.cur).catch(()=>{});adbDel('cover:'+PR.cur).catch(()=>{});adbDel('vocals:'+PR.cur).catch(()=>{});adbDel('inst:'+PR.cur).catch(()=>{});delete PR.list[PR.cur];PR.cur=null;const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
   openProj(ids.length?ids[0]:newProj('Proyecto 1'),true);
 };
 
@@ -3647,33 +3629,63 @@ $('pkl').onclick=e=>{
   if(b.classList.contains('pco')){if(id===PR.cur)closePicker();else openProj(id)}
   else if(b.classList.contains('pcd')){
     const p=PR.list[id];if(!confirm('¿Borrar el proyecto «'+p.name+'»? No se puede deshacer.'))return;
-    cTomb(id);adbDel(id).catch(()=>{});adbDel('cover:'+id).catch(()=>{});adbDel('vocals:'+id).catch(()=>{});adbDel('inst:'+id).catch(()=>{});delete PR.list[id];if(id===PR.cur){unloadAudio();PR.cur=null;L=[];P={l:0,w:0};H=[];R=[];render();updH();pjUI()}
+    adbDel(id).catch(()=>{});adbDel('cover:'+id).catch(()=>{});adbDel('vocals:'+id).catch(()=>{});adbDel('inst:'+id).catch(()=>{});delete PR.list[id];if(id===PR.cur){unloadAudio();PR.cur=null;L=[];P={l:0,w:0};H=[];R=[];render();updH();pjUI()}
     savePR();pkRender();
   }
 };
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('pk').hidden&&!$('pkx').hidden)closePicker()});
 
 /* ===== Respaldo ===== */
-function exportBackup(){
+const blobURL=b=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=()=>no(r.error);r.readAsDataURL(b)});
+const urlBlob=async u=>(await fetch(u)).blob();
+async function exportBackup(){
   save(true);
-  const o={app:'lyric-sync',version:APP_VERSION,exported:new Date().toISOString(),projects:Object.keys(PR.list).map(id=>Object.assign({id},PR.list[id]))};
-  dl('lyric-sync-respaldo-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(o),'application/json');
+  const ids=Object.keys(PR.list),parts=['{"app":"lyric-sync","version":'+JSON.stringify(APP_VERSION)+',"format":2,"exported":'+JSON.stringify(new Date().toISOString())+',"kart":'+JSON.stringify(getMeta().kart||{})+',"projects":['];
+  let nAud=0,nCov=0,miss=0;
+  try{
+    for(let k=0;k<ids.length;k++){
+      const id=ids[k],p=PR.list[id];note('Armando el respaldo… '+(k+1)+' de '+ids.length+(p.name?' («'+p.name+'»)':''));
+      const o=Object.assign({id},p);delete o.vsv;delete o.stm;
+      parts.push((k?',':'')+JSON.stringify(o).slice(0,-1));
+      if(p.asv){
+        try{const r=await adbGet(id);if(r&&r.blob){const du=await blobURL(r.blob);parts.push(',"aud":'+JSON.stringify({name:r.name||p.audio||'audio',type:r.type||r.blob.type||''})+',"audData":"',du,'"');nAud++}else miss++}catch(e){miss++}
+      }
+      try{const c=await adbGet(coverKey(id));if(c&&c.size){parts.push(',"cov":'+JSON.stringify(await blobURL(c)));nCov++}}catch(e){}
+      parts.push('}');
+    }
+  }catch(e){alert('No pude armar el respaldo: '+e.message+'. Si tenés muchas canciones con audio, probá otra vez cerrando otras pestañas.');status();return}
+  parts.push(']}');
+  const blob=new Blob(parts,{type:'application/json'}),a2=document.createElement('a');
+  a2.href=URL.createObjectURL(blob);a2.download='lyric-sync-respaldo-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a2);a2.click();setTimeout(()=>{URL.revokeObjectURL(a2.href);a2.remove()},4000);
   setMeta({last:Date.now(),snooze:0});remRender();pjUI();
+  note('Respaldo listo ('+(blob.size/1048576).toFixed(1)+' MB): '+ids.length+' proyecto'+(ids.length===1?'':'s')+', '+nAud+' con audio, '+nCov+' con portada'+(miss?' · '+miss+' con audio que no pude leer':'')+'.');
 }
 async function importBackup(f){
-  let o;try{o=JSON.parse(await f.text())}catch(e){return alert('Ese archivo no es un respaldo válido.')}
+  let o;try{o=JSON.parse(await f.text())}catch(e){return alert('Ese archivo no es un respaldo válido (o es demasiado grande para este dispositivo).')}
   if(!o||o.app!=='lyric-sync'||!Array.isArray(o.projects))return alert('Ese archivo no es un respaldo de Lyric Sync.');
-  let add=0,skip=0;
-  o.projects.forEach(q=>{
-    if(!q||!Array.isArray(q.L))return;
-    const id=q.id,rest=Object.assign({},q);delete rest.id;
+  let add=0,skip=0,aud=0,cov=0;const idMap={};
+  const restore=async(nid,q)=>{
+    try{if(q.audData){const b=await urlBlob(q.audData),a=q.aud||{},ty=a.type||b.type||'';const bb=new Blob([b],{type:ty});await adbSet(nid,{blob:bb,name:a.name||q.audio||'audio',size:bb.size,type:ty});Object.assign(PR.list[nid],{audio:a.name||q.audio||'audio',asv:true,asz:bb.size});aud++}}catch(e){}
+    try{if(q.cov){const key=coverKey(nid);if(!(await adbGet(key))){await adbSet(key,await urlBlob(q.cov));cov++}}}catch(e){}
+  };
+  for(const q of o.projects){
+    if(!q||!Array.isArray(q.L))continue;
+    const id=q.id,rest=Object.assign({},q);delete rest.id;delete rest.aud;delete rest.audData;delete rest.cov;
     const ex=id&&PR.list[id];
-    if(ex&&JSON.stringify(ex.L)===JSON.stringify(rest.L)){skip++;return}
-    const nid=ex||!id?uid():id;
+    if(ex&&JSON.stringify(ex.L)===JSON.stringify(rest.L)){
+      skip++;idMap[id]=id;
+      if(q.audData&&!ex.asv)await restore(id,q);else if(q.cov)await restore(id,{cov:q.cov});
+      continue;
+    }
+    const nid=ex||!id?uid():id;if(id)idMap[id]=nid;
     PR.list[nid]=Object.assign({name:'Sin título',lang:'es',comp:100,auto:true,follow:false,audio:'',upd:Date.now()},rest,ex?{name:(rest.name||'Sin título')+' (importado)'}:{});PR.list[nid].asv=false;add++;
-  });
+    await restore(nid,q);
+  }
+  /* artistas: se agregan los que acá no estaban */
+  try{const k=Object.assign({},getMeta().kart||{});let ch=false;Object.entries(o.kart||{}).forEach(([key,v])=>{const kk=idMap[key]||key;if(!(kk in k)){k[kk]=v;ch=true}});if(ch)setMeta({kart:k})}catch(e){}
   savePR();pjUI();if(!$('pk').hidden)pkRender();
-  alert(add+' proyecto'+(add===1?'':'s')+' importado'+(add===1?'':'s')+(skip?' · '+skip+' ya estaba'+(skip===1?'':'n'):'')+'.');
+  alert(add+' proyecto'+(add===1?'':'s')+' importado'+(add===1?'':'s')+(skip?' · '+skip+' ya estaba'+(skip===1?'':'n'):'')+(aud?' · '+aud+' con audio':'')+(cov?' · '+cov+' portada'+(cov===1?'':'s'):'')+'.');
 }
 const pickBackup=e=>{const f=e.target.files[0];e.target.value='';if(f)importBackup(f)};
 $('bkx').onclick=exportBackup;$('pkxb').onclick=exportBackup;$('bki').onchange=pickBackup;$('pkb').onchange=pickBackup;
@@ -4041,7 +4053,7 @@ async function kcvSet(file){
   if(!PR.cur||!PR.list[PR.cur]){note('Abrí primero un proyecto para ponerle portada.');return}
   try{
     const bm=await createImageBitmap(file),r=Math.min(1,720/Math.max(bm.width,bm.height)),c=document.createElement('canvas');c.width=Math.round(bm.width*r);c.height=Math.round(bm.height*r);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);
-    const blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.9));await adbSet(coverKey(PR.cur),blob);try{const r=cgS().rmc||{};delete r[coverKey(PR.cur)];csS({rmc:r});cDirty()}catch(e){}await kpCover();rmtPush(true);note(projAlbum(PR.cur)?'Portada guardada en el álbum «'+projAlbum(PR.cur)+'»: la comparten todos sus proyectos.':'Portada guardada en este proyecto.');
+    const blob=await new Promise(ok=>c.toBlob(ok,'image/jpeg',.9));await adbSet(coverKey(PR.cur),blob);await kpCover();rmtPush(true);note(projAlbum(PR.cur)?'Portada guardada en el álbum «'+projAlbum(PR.cur)+'»: la comparten todos sus proyectos.':'Portada guardada en este proyecto.');
   }catch(e){note('No pude leer esa imagen.')}
 }
 (function(){
@@ -4070,7 +4082,7 @@ async function kcvSet(file){
    g.addEventListener('pointermove',e=>{if(dn)seek(e)});
    ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>g.addEventListener(ev,()=>{dn=false;g.classList.remove('dn')}));
    g.setAttribute('tabindex','0');g.addEventListener('keydown',e=>{const k=e.key==='ArrowRight'?5:e.key==='ArrowLeft'?-5:0;if(k){kpSeek(kpT()+k);e.preventDefault()}})}
-  $('kcxr').onclick=async()=>{if(PR.cur){try{cCoverRm(coverKey(PR.cur));await adbDel(coverKey(PR.cur));await adbDel('cover:'+PR.cur)}catch(e){}await kpCover();rmtPush(true);note('Portada quitada.')}};
+  $('kcxr').onclick=async()=>{if(PR.cur){try{await adbDel(coverKey(PR.cur));await adbDel('cover:'+PR.cur)}catch(e){}await kpCover();rmtPush(true);note('Portada quitada.')}};
   $('kpcv').onclick=e=>{e.stopPropagation();m.hidden=!m.hidden;if(!m.hidden){$('kq').hidden=true;$('kthm').hidden=true;$('kfm').hidden=true;kcvApply()}};
   $('kpth').addEventListener('click',()=>{if(!$('kthm').hidden)m.hidden=true});
   $('kpaa').addEventListener('click',()=>{if(!$('kfm').hidden)m.hidden=true});
@@ -4548,7 +4560,6 @@ if(RMT_REMOTE){
     ['chd','🎸','Acordes',''],
     ['avd,dud','⚠️','Avisos y dudosas',''],
     ['exd','📤','Exportar y herramientas','.ttml, .lrc, copiar'],
-    ['cld','☁️','Nube','Google Drive, todos tus dispositivos'],
     ['more','⋯','Más','versiones, remoto, apariencia, ayuda']
   ],more=[['vh','🕘','Versiones',''],['rmd','📡','Control remoto',''],['apd','🎨','Apariencia',''],['hwd','❓','Cómo se usa','']];
   const box=$('tools'),extra=$('tools2');
@@ -4589,243 +4600,6 @@ if(RMT_REMOTE){
     const r=e.target.closest('.ln');if(!r)return;
     actI=+r.dataset.i;$('ls').querySelectorAll('.ln.act').forEach(x=>x!==r&&x.classList.remove('act'));r.classList.add('act');
   });
-})();
-/* ===== Nube: sincronización con Google Drive (carpeta privada de la app) ===== */
-const CK='lyricsync_cloud',CSCOPE='https://www.googleapis.com/auth/drive.appdata',C_REMOTE=/[#&?]remote\b/.test(location.hash+location.search);
-const cld={tok:null,exp:0,busy:false,syn:false,timer:0,gsi:null,cl:null,again:false,err:'',msg:'',pct:0,need:false,deferred:false};
-const cgS=()=>{try{return JSON.parse(localStorage.getItem(CK)||'{}')}catch(e){return{}}};
-const csS=o=>{try{localStorage.setItem(CK,JSON.stringify(Object.assign(cgS(),o)))}catch(e){}};
-function cUI(msg,pct,isErr){
-  if(msg!=null){cld.msg=msg;cld.err=isErr?msg:''}
-  if(pct!=null)cld.pct=pct;
-  const s=$('cls'),b=$('clb');if(!s)return;
-  const S=cgS();
-  let t=cld.msg;
-  if(!t){
-    if(location.protocol==='file:')t='Para usar la nube abrí la app desde una dirección https:// (por ejemplo GitHub Pages) o http://localhost. Desde un archivo local Google no lo permite.';
-    else if(!S.cid)t='Falta el ID de cliente de Google (mirá «Cómo conseguirlo» más abajo).';
-    else if(!S.on)t='Sin conectar.';
-    else t='Conectado'+(S.last?' · última sincronización '+new Date(S.last).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}):'')+'.';
-  }
-  s.textContent=t;s.style.color=cld.err?'var(--wn)':'';
-  if(b)b.style.width=Math.round((cld.pct||0)*100)+'%';
-  const con=$('clcon'),on=!!S.on;
-  if(con){con.textContent=on?(cld.need?'Reconectar':'Cuenta conectada'):'Conectar con Google';con.disabled=on&&!cld.need}
-  $('clnow').disabled=!on||cld.busy;$('clout').disabled=!on;
-  const bd=document.querySelector('#tools .acc[data-t=cld] .bdg');if(bd){bd.hidden=!cld.need;bd.textContent='!'}
-}
-function cGsi(){
-  return cld.gsi||(cld.gsi=new Promise((ok,no)=>{
-    if(window.google&&google.accounts&&google.accounts.oauth2)return ok();
-    const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;
-    s.onload=()=>ok();s.onerror=()=>{cld.gsi=null;no(new Error('No pude cargar el acceso de Google (¿hay internet?)'))};document.head.appendChild(s);
-  }));
-}
-function cToken(interactive){
-  return new Promise((ok,no)=>{
-    if(cld.tok&&Date.now()<cld.exp-60000)return ok(cld.tok);
-    const cid=cgS().cid;if(!cid)return no(new Error('Falta el ID de cliente de Google.'));
-    cGsi().then(()=>{
-      if(!cld.cl||cld.cl._cid!==cid){
-        cld.cl=google.accounts.oauth2.initTokenClient({client_id:cid,scope:CSCOPE,callback:r=>cld.cb&&cld.cb(r),error_callback:e=>cld.eb&&cld.eb(e)});cld.cl._cid=cid;
-      }
-      cld.cb=r=>{if(!r||r.error){const e=new Error((r&&(r.error_description||r.error))||'No se pudo iniciar sesión');e.login=true;no(e);return}
-        cld.tok=r.access_token;cld.exp=Date.now()+(+r.expires_in||3600)*1000;csS({ok:1});ok(cld.tok)};
-      cld.eb=e=>{const t=e&&e.type,er=new Error(t==='popup_closed'?'Cerraste la ventana de Google antes de terminar.':t==='popup_failed_to_open'?'El navegador bloqueó la ventana de Google: tocá «Reconectar».':'No se pudo iniciar sesión con Google.');er.login=true;no(er)};
-      try{cld.cl.requestAccessToken({prompt:interactive&&!cgS().ok?'consent':''})}catch(e){e.login=true;no(e)}
-    },no);
-  });
-}
-async function cApi(path,opt,retry){
-  const t=await cToken(false);
-  const r=await fetch(/^https?:/.test(path)?path:'https://www.googleapis.com/drive/v3/'+path,Object.assign({},opt,{headers:Object.assign({Authorization:'Bearer '+t},opt&&opt.headers)}));
-  if(r.status===401&&!retry){cld.tok=null;return cApi(path,opt,true)}
-  if(!r.ok){const tx=await r.text().catch(()=>'');const e=new Error('Drive '+r.status+(tx?': '+tx.slice(0,140):''));e.status=r.status;throw e}
-  return r;
-}
-async function cList(){
-  let out=[],pt='';
-  do{const r=await cApi('files?spaces=appDataFolder&pageSize=1000&fields='+encodeURIComponent('nextPageToken,files(id,name,size,appProperties)')+(pt?'&pageToken='+encodeURIComponent(pt):''));
-    const j=await r.json();out=out.concat(j.files||[]);pt=j.nextPageToken||''}while(pt);
-  const m=new Map();out.forEach(f=>m.set(f.name,f));return m;
-}
-const cUp='https://www.googleapis.com/upload/drive/v3/files';
-async function cPutJson(name,obj,props,ex){
-  const meta={name,appProperties:props};if(!ex)meta.parents=['appDataFolder'];
-  const b='lsb'+Math.random().toString(36).slice(2);
-  const body=new Blob(['--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+b+'\r\nContent-Type: application/json\r\n\r\n'+JSON.stringify(obj)+'\r\n--'+b+'--']);
-  const r=await cApi(cUp+(ex?'/'+ex.id:'')+'?uploadType=multipart&fields='+encodeURIComponent('id,name,size,appProperties'),{method:ex?'PATCH':'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body});
-  return r.json();
-}
-async function cPutBlob(name,blob,props,ex,prog){
-  const meta={name,appProperties:props};if(!ex)meta.parents=['appDataFolder'];
-  const ty=blob.type||'application/octet-stream';
-  const r=await cApi(cUp+(ex?'/'+ex.id:'')+'?uploadType=resumable&fields='+encodeURIComponent('id,name,size,appProperties'),{method:ex?'PATCH':'POST',headers:{'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':ty,'X-Upload-Content-Length':String(blob.size)},body:JSON.stringify(meta)});
-  const loc=r.headers.get('Location');if(!loc)throw new Error('Drive no devolvió la dirección de subida.');
-  return new Promise((ok,no)=>{
-    const x=new XMLHttpRequest();x.open('PUT',loc);x.setRequestHeader('Content-Type',ty);
-    x.upload.onprogress=e=>{if(prog&&e.lengthComputable)prog(e.loaded/e.total)};
-    x.onload=()=>{if(x.status>=200&&x.status<300){let j={};try{j=JSON.parse(x.responseText||'{}')}catch(e){}ok(j)}else no(new Error('Drive '+x.status))};
-    x.onerror=()=>no(new Error('Se cortó la conexión mientras subía un archivo.'));x.send(blob);
-  });
-}
-const cGetBlob=async f=>(await cApi('files/'+f.id+'?alt=media')).blob();
-const cGetJson=async f=>(await cApi('files/'+f.id+'?alt=media')).json();
-const cDel=async f=>{try{await cApi('files/'+f.id,{method:'DELETE'})}catch(e){if(e.status!==404)throw e}};
-const cProp=(f,k)=>f&&f.appProperties?f.appProperties[k]:undefined;
-const cEmpty=p=>!p.asv&&!(p.L||[]).some(l=>l.w&&l.w.length);
-const cName=k=>k.startsWith('cover:album:')?'ca_'+k.slice(12):'c_'+k.slice(6);
-async function cLocalDelete(id){
-  for(const k of [id,'cover:'+id,'vocals:'+id,'inst:'+id,'ver:'+id])await adbDel(k).catch(()=>{});
-  delete PR.list[id];
-}
-/* decide qué hacer con un archivo grande (audio / portada) comparando tamaños con la última vez que estuvieron iguales */
-function cDecide(Ls,Rs,Mk,locDel,pref){
-  if(Ls==null&&Rs==null)return 'none';
-  if(Ls!=null&&Rs==null)return Mk!=null&&Mk===Ls?'dell':'up';
-  if(Ls==null&&Rs!=null)return locDel&&Mk!=null&&Mk===Rs?'delr':'down';
-  if(Ls===Rs)return 'same';
-  if(Mk!=null){if(Ls!==Mk&&Rs===Mk)return 'up';if(Rs!==Mk&&Ls===Mk)return 'down'}
-  return pref;
-}
-async function cSync(manual){
-  if(C_REMOTE)return;
-  const S0=cgS();if(!S0.cid||!S0.on)return;
-  if(cld.busy){cld.again=true;return}
-  cld.busy=true;cld.syn=true;cld.need=false;cUI('Conectando con Google Drive…',0.02);
-  const st={up:0,down:0,del:0};let changed=false;
-  try{
-    const files=await cList();
-    const S=cgS(),M=Object.assign({},S.m||{}),pend=Object.assign({},S.pend||{}),rmc=Object.assign({},S.rmc||{});
-    const put=(n,f)=>{if(f)files.set(n,f)};
-    /* 1) borrados hechos en este dispositivo */
-    for(const id of Object.keys(pend)){
-      put('del_'+id,await cPutJson('del_'+id,{id},{upd:String(pend[id])},files.get('del_'+id)));
-      for(const n of ['p_'+id,'a_'+id,'c_'+id]){const f=files.get(n);if(f){await cDel(f);files.delete(n)}}
-      delete pend[id];st.del++;
-    }
-    csS({pend});
-    /* 2) proyectos (letra, tiempos, ajustes): gana el más reciente */
-    const ids=new Set(Object.keys(PR.list));files.forEach((f,n)=>{if(n.startsWith('p_'))ids.add(n.slice(2))});
-    const arr=[...ids];let k=0;
-    for(const id of arr){
-      k++;cUI('Revisando proyectos… ('+k+'/'+arr.length+')',0.05+0.25*k/arr.length);
-      const lp=PR.list[id],rf=files.get('p_'+id),tf=files.get('del_'+id);
-      const lu=lp?+lp.upd||0:0,ru=+cProp(rf,'upd')||0,tu=+cProp(tf,'upd')||0;
-      if(tf&&tu>=Math.max(lu,ru)){
-        if(lp&&id!==PR.cur){await cLocalDelete(id);changed=true;st.del++}
-        for(const n of ['p_'+id,'a_'+id,'c_'+id]){const f=files.get(n);if(f){await cDel(f);files.delete(n)}}
-        continue;
-      }
-      if(tf){await cDel(tf);files.delete('del_'+id)}
-      if(lp&&!rf&&cEmpty(lp))continue;
-      if(!lp||ru>lu){
-        if(id===PR.cur){cld.deferred=true;continue}
-        const j=await cGetJson(rf),np=j&&j.p;if(!np)continue;
-        const keep=lp?{asv:lp.asv,asz:lp.asz}:{asv:false};
-        PR.list[id]=Object.assign(np,keep,{upd:ru||np.upd});changed=true;st.down++;
-      }else if(!rf||lu>ru){
-        const o=Object.assign({},lp);delete o.vsv;delete o.stm;delete o.asv;delete o.asz;
-        put('p_'+id,await cPutJson('p_'+id,{v:1,p:o},{upd:String(lu)},rf));st.up++;
-      }
-    }
-    if(changed)savePR();
-    /* 3) audio y portada de cada proyecto */
-    const cvDone=new Set(),pids=Object.keys(PR.list);let n2=0;
-    for(const id of pids){
-      n2++;const p=PR.list[id];if(!p||(cEmpty(p)&&!files.get('p_'+id)))continue;
-      const base=0.3+0.6*n2/pids.length,lab='«'+(p.name||'Sin título')+'»';
-      /* audio */
-      {
-        const an='a_'+id,rf=files.get(an);let rec=null;
-        if(p.asv){try{rec=await adbGet(id)}catch(e){}}
-        const Ls=rec&&rec.blob?rec.blob.size:null,Rs=rf?+rf.size:null,Mk=M[an]!=null?M[an]:null;
-        const a=cDecide(Ls,Rs,Mk,p.asv===false,(+p.upd||0)>=(+cProp(files.get('p_'+id),'upd')||0)?'up':'down');
-        if(a==='up'){
-          cUI('Subiendo audio de '+lab+'…',base);
-          const r=await cPutBlob(an,rec.blob,{ty:(rec.type||rec.blob.type||'').slice(0,100)},rf,f=>cUI('Subiendo audio de '+lab+' · '+Math.round(f*100)+'%',base+0.5/pids.length*f));
-          put(an,r.id?r:Object.assign({},rf||{},{size:String(rec.blob.size)}));M[an]=Ls;st.up++;
-        }else if(a==='down'){
-          cUI('Bajando audio de '+lab+'…',base);
-          const raw=await cGetBlob(rf),ty=cProp(rf,'ty')||raw.type||'audio/mpeg',b=new Blob([raw],{type:ty});
-          await adbSet(id,{blob:b,name:p.audio||'audio',size:b.size,type:ty});
-          p.asv=true;p.asz=b.size;if(!p.audio)p.audio='audio';M[an]=b.size;changed=true;st.down++;
-        }else if(a==='same')M[an]=Ls;
-        else if(a==='delr'){await cDel(rf);files.delete(an);delete M[an]}
-        else if(a==='dell'){await adbDel(id).catch(()=>{});p.asv=false;delete p.asz;if(id===PR.cur)cld.deferred=true;delete M[an];changed=true}
-        else if(a==='none')delete M[an];
-      }
-      /* portada (la de un álbum la comparten todos sus proyectos) */
-      {
-        const key=coverKey(id);if(cvDone.has(key))continue;cvDone.add(key);
-        const cn=cName(key),rf=files.get(cn);let lb=null;
-        try{lb=await adbGet(key)}catch(e){}
-        const Ls=lb&&lb.size!=null?lb.size:null,Rs=rf?+rf.size:null,Mk=M[cn]!=null?M[cn]:null;
-        const a=cDecide(Ls,Rs,Mk,!!rmc[key],'up');
-        if(a==='up'){const r=await cPutBlob(cn,lb,{ty:lb.type||'image/jpeg'},rf);put(cn,r.id?r:rf);M[cn]=Ls;delete rmc[key];st.up++}
-        else if(a==='down'){const raw=await cGetBlob(rf),b=new Blob([raw],{type:cProp(rf,'ty')||raw.type||'image/jpeg'});await adbSet(key,b);M[cn]=b.size;changed=true;st.down++}
-        else if(a==='same')M[cn]=Ls;
-        else if(a==='delr'){await cDel(rf);files.delete(cn);delete M[cn];delete rmc[key]}
-        else if(a==='dell'){await adbDel(key).catch(()=>{});delete M[cn];changed=true}
-        else if(a==='none')delete M[cn];
-      }
-    }
-    /* 4) artistas (se combinan; si lo cambiaste acá gana lo de este dispositivo) */
-    {
-      const mf=files.get('meta.json'),loc=getMeta().kart||{},lh=JSON.stringify(loc);
-      let rem={};if(mf){try{rem=(await cGetJson(mf)).kart||{}}catch(e){}}
-      const lch=lh!==(S.kh||'{}'),mg=lch?Object.assign({},rem,loc):Object.assign({},loc,rem),mh=JSON.stringify(mg);
-      if(mh!==lh){setMeta({kart:mg});changed=true}
-      if(mh!==JSON.stringify(rem))put('meta.json',await cPutJson('meta.json',{kart:mg},{upd:String(Date.now())},mf));
-      csS({kh:mh});
-    }
-    csS({m:M,rmc,last:Date.now()});
-    if(changed){savePR();try{pjUI()}catch(e){}try{if(!$('pk').hidden)pkRender()}catch(e){}}
-    cld.pct=1;
-    const bits=[];if(st.up)bits.push(st.up+' subido'+(st.up>1?'s':''));if(st.down)bits.push(st.down+' bajado'+(st.down>1?'s':''));if(st.del)bits.push(st.del+' borrado'+(st.del>1?'s':''));
-    cUI((bits.length?'Listo: '+bits.join(', ')+'. ':'Todo al día. ')+(cld.deferred?'Hay cambios nuevos en el proyecto abierto: se aplican cuando lo cierres y se vuelva a sincronizar.':''),1);
-    setTimeout(()=>{if(!cld.busy){cld.pct=0;cld.msg='';cUI()}},4000);
-  }catch(e){
-    if(e.login||/Falta el ID|cargar el acceso/.test(e.message)){cld.need=!!e.login}
-    cUI((e.login?'Hay que volver a iniciar sesión: tocá «Reconectar». ':'')+'No se pudo sincronizar: '+e.message,0,true);
-  }finally{
-    cld.busy=false;cld.syn=false;cUI();
-    if(cld.again){cld.again=false;cDirty()}
-  }
-}
-function cDirty(){
-  if(C_REMOTE||cld.syn)return;
-  const S=cgS();if(!S.on||!S.cid)return;
-  clearTimeout(cld.timer);cld.timer=setTimeout(()=>cSync(false),20000);
-}
-/* avisar de borrados y de portadas quitadas */
-function cTomb(id){const p=cgS().pend||{};p[id]=Date.now();csS({pend:p});cDirty()}
-function cCoverRm(key){const r=cgS().rmc||{};r[key]=1;csS({rmc:r});cDirty()}
-(function(){
-  if(C_REMOTE)return;
-  const d=$('cld');if(!d)return;
-  $('clorg').textContent=location.origin==='null'?'(archivo local)':location.origin;
-  $('clid').value=cgS().cid||'';
-  $('clsave').onclick=()=>{csS({cid:$('clid').value.trim()});cld.cl=null;cld.tok=null;cUI('ID guardado.');setTimeout(()=>{cld.msg='';cUI()},2000)};
-  $('clcon').onclick=async()=>{
-    const v=$('clid').value.trim();if(v!==(cgS().cid||'')){csS({cid:v});cld.cl=null;cld.tok=null}
-    if(location.protocol==='file:'){cUI();return}
-    if(!cgS().cid){cUI('Pegá primero el ID de cliente de Google.',0,true);return}
-    try{cUI('Abriendo Google…',0.02);await cToken(true);csS({on:1});cld.need=false;cUI('Conectado.',0);cSync(true)}
-    catch(e){cld.need=!!cgS().on;cUI('No se pudo conectar: '+e.message,0,true)}
-  };
-  $('clnow').onclick=()=>{clearTimeout(cld.timer);cSync(true)};
-  $('clout').onclick=()=>{
-    if(!confirm('¿Desconectar Google Drive de este dispositivo? Tus proyectos locales y los que ya están en la nube no se borran.'))return;
-    try{if(cld.tok&&window.google&&google.accounts)google.accounts.oauth2.revoke(cld.tok,()=>{})}catch(e){}
-    cld.tok=null;cld.need=false;csS({on:0,ok:0,m:{},kh:''});cld.msg='Desconectado.';cUI();
-  };
-  cUI();
-  const go=()=>{if(cgS().on&&!cld.busy)cSync(false)};
-  setTimeout(go,2500);
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-(cgS().last||0)>120000)go()});
-  addEventListener('online',go);
-  setInterval(()=>{if(document.visibilityState==='visible'&&Date.now()-(cgS().last||0)>300000)go()},60000);
 })();
 function psumUpd(){
   const tot=L.reduce((n,l)=>n+l.w.length,0),dn=L.reduce((n,l)=>n+l.w.filter(x=>x.s!=null).length,0),lines=L.filter(l=>l.w.length&&l.w.every(x=>x.s!=null)).length;
