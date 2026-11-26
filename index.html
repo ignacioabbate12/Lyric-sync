@@ -147,20 +147,41 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 .grp button{padding:.15em .6em;font-size:12px;border-radius:8px}
 .grp input{width:96px}
 #svs{font-size:12px}
-#pk{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;display:flex;justify-content:center;padding:7vh 20px}
-.pkin{width:100%;max-width:680px}
-.pkin h1{font-size:34px;margin-bottom:4px}
-.pc{display:flex;align-items:stretch;background:var(--pn);border:1px solid var(--ln);border-radius:16px;margin:10px 0}
-.pc:hover{border-color:var(--ac)}
-.pco{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:none;border:0;border-radius:16px;padding:14px 16px;text-align:left}
-.pco .nm{font:600 19px Georgia,"Iowan Old Style",serif}
-.pco .m2{color:var(--mu);font-size:13px}
-.pco .b2{align-self:stretch;height:4px;background:var(--ln);border-radius:2px;margin-top:8px;overflow:hidden}
-.pco .b2 i{display:block;height:100%;background:var(--ac)}
-.pcd{background:none;border:0;border-radius:0 16px 16px 0;padding:0 16px;color:var(--mu)}
-.pcd:hover{color:var(--wn)}
-.pknew{display:flex;gap:10px;margin:20px 0 6px}
-.pknew input{flex:1;font-size:16px;padding:.55em .8em}
+#pk{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;display:flex;justify-content:center;padding:5vh 24px 40px}
+.pkin{width:100%;max-width:1120px}
+.pkh{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.pkin h1{font-size:36px;margin:0 0 2px;letter-spacing:-.01em}
+#pkkj{font-size:15px;padding:.75em 1.3em;border-radius:99px;font-weight:700}
+.pktool{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 18px}
+.pktool input[type=search]{flex:1 1 260px;font-size:15px;padding:.6em 1em;border-radius:99px}
+.pktool select{font-size:14px;padding:.55em .9em;border-radius:99px}
+.pknew{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--pn);border:1px dashed var(--ln);border-radius:16px;padding:12px 14px;margin:0 0 22px}
+.pknew b{font-size:14px}.pknew input{flex:1 1 220px;font-size:15px;padding:.55em .9em}
+.pkhero{display:flex;gap:18px;align-items:stretch;background:linear-gradient(120deg,color-mix(in srgb,var(--ac) 20%,var(--pn)),var(--pn));border:1px solid var(--ln);border-radius:20px;padding:14px;margin:0 0 26px;position:relative}
+.pkhero .pco{flex-direction:row;align-items:center;gap:18px;padding:6px;border-radius:14px;flex:1;min-width:0}
+.pkhero .pcv{width:128px;flex:none}.pkhero .tx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pkhero small{color:var(--mu);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.pkhero .nm{font-size:26px}
+.pkg h2{font:700 17px system-ui;margin:22px 0 10px;display:flex;align-items:center;gap:8px}.pkg h2 small{color:var(--mu);font-weight:500}
+.pkgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px}
+.pc{position:relative;background:var(--pn);border:1px solid var(--ln);border-radius:16px;transition:transform .15s,border-color .15s,box-shadow .15s}
+.pc:hover,.pc:focus-within{border-color:var(--ac);transform:translateY(-3px);box-shadow:0 10px 26px rgba(0,0,0,.25)}
+.pco{width:100%;display:flex;flex-direction:column;align-items:stretch;gap:3px;background:none;border:0;border-radius:16px;padding:10px 10px 12px;text-align:left;cursor:pointer;color:inherit}
+.pcv{position:relative;display:block;aspect-ratio:1;border-radius:11px;overflow:hidden;margin-bottom:6px;box-shadow:0 6px 16px rgba(0,0,0,.28)}
+.pcv img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pcv b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 clamp(38px,5vw,60px) system-ui;color:rgba(255,255,255,.88);text-shadow:0 2px 12px rgba(0,0,0,.35)}
+.pcv .pcp{position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(0,0,0,.35)}.pcv .pcp i{display:block;height:100%;background:var(--ac)}
+.pco .nm{font:700 15.5px system-ui;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pco .ar{color:var(--mu);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:1.2em}
+.pco .m2{color:var(--mu);font-size:12px}
+.pco .chs{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.pco .chs span{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--ac) 20%,transparent)}
+.pcd{position:absolute;top:14px;right:14px;width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:14px;opacity:0;transition:opacity .15s}
+.pc:hover .pcd,.pc:focus-within .pcd,.pcd:focus-visible{opacity:1}.pcd:hover{background:var(--wn)}
+@media (hover:none){.pcd{opacity:.8}}
+.pkhero .pcd{top:12px;right:12px;opacity:.8}
+.pkfoot{display:flex;gap:10px;flex-wrap:wrap;margin-top:34px;padding-top:18px;border-top:1px solid var(--ln)}
+@media (max-width:560px){#pk{padding:4vh 14px 30px}.pkgrid{grid-template-columns:repeat(2,1fr);gap:12px}.pkhero{flex-direction:column}.pkhero .pcv{width:96px}.pkhero .nm{font-size:21px}.pkin h1{font-size:28px}}
 .rem{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--pn);border:1px solid var(--ln);border-left:4px solid var(--on);border-radius:12px;padding:10px 14px;margin:12px 0}
 .ln.splitting .w{cursor:crosshair;box-shadow:0 0 0 2px var(--ac)}
 .ln.splitting .w input{pointer-events:none}
@@ -363,7 +384,6 @@ button,.btn,select{touch-action:manipulation}
   .wvc{gap:6px 10px}
   #wv{width:100%}
   #pk{padding:5vh 14px}
-  .pknew{flex-wrap:wrap}
   .pknew input{flex:1 1 100%;min-width:0}
   #deck #mk,.deck #mk,.deck #un{display:none}
 }
@@ -674,13 +694,12 @@ dialog p{margin:6px 0;color:var(--mu)}
 </div>
 <div id="pk" role="dialog" aria-modal="true" aria-labelledby="pkt" hidden>
   <div class="pkin">
-    <h1 id="pkt">Lyric Sync <span class="mu ver" style="font:14px system-ui"></span></h1>
-    <p class="mu">Elegí un proyecto para seguir o empezá uno nuevo.</p>
+    <div class="pkh"><div><h1 id="pkt">Lyric Sync <span class="mu ver" style="font:14px system-ui"></span></h1><p class="mu" style="margin:0">Tu biblioteca de letras sincronizadas</p></div><button id="pkkj" class="pri">🎤 Reproductor karaoke</button></div>
     <div id="pkr" class="rem" hidden></div>
-    <div class="row" style="margin:0 0 12px"><button id="pkkj" class="pri">🎤 Reproductor karaoke</button></div>
+    <div class="pknew"><b>＋ Nueva canción</b><input id="pkn" type="text" maxlength="80" placeholder="Nombre de la canción nueva" aria-label="Nombre del proyecto nuevo"><button id="pkc" class="pri">Crear proyecto</button></div>
+    <div class="pktool"><input id="pks" type="search" placeholder="Buscar por canción, artista o álbum" aria-label="Buscar proyectos"><select id="pko" aria-label="Ordenar"><option value="rec">Más recientes</option><option value="nom">Nombre (A–Z)</option><option value="alb">Agrupar por álbum</option><option value="sync">Más completos primero</option></select></div>
     <div id="pkl"></div>
-    <div class="pknew"><input id="pkn" type="text" maxlength="80" placeholder="Nombre de la canción nueva" aria-label="Nombre del proyecto nuevo"><button id="pkc" class="pri">Crear proyecto</button></div>
-    <div class="row"><button id="pkxb">Exportar respaldo</button><label class="btn">Importar respaldo<input id="pkb" type="file" accept=".json,application/json" hidden></label><button id="pkx" hidden>Volver</button></div>
+    <div class="pkfoot"><button id="pkxb">Exportar respaldo</button><label class="btn">Importar respaldo<input id="pkb" type="file" accept=".json,application/json" hidden></label><button id="pkx" hidden>Volver</button></div>
   </div>
 </div>
 <script>
@@ -1641,7 +1660,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.65',PK='lyricsync_projects';
+const APP_VERSION='3.66',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3447,18 +3466,53 @@ $('kpc').addEventListener('change',()=>{$('kp').classList.toggle('chs',$('kpc').
 if(getMeta().kpc){$('kpc').checked=true;$('kp').classList.add('chs')}
 
 /* ===== Selector de proyecto (pantalla completa) ===== */
+let pkUrls=[],pkTok=0;
+const pkHue=n=>{let h=0;for(const c of String(n))h=(h*31+c.charCodeAt(0))%360;return h};
+function pkStat(p){const Lp=p.L||[],nw=Lp.reduce((n,l)=>n+l.w.length,0),nt=Lp.reduce((n,l)=>n+l.w.filter(x=>x.s!=null).length,0);return{n:Lp.length,pct:nw?Math.round(nt/nw*100):0}}
+function pkCard(id,hero){
+  const p=PR.list[id],st=pkStat(p),h=pkHue(p.name),ar=(typeof artGet==='function'?artGet(id):'')||'';
+  const chips=(p.asv?'<span>🎵 con audio</span>':'')+(st.pct===100&&p.asv?'<span>✓ lista</span>':'')+(p.album&&!hero?'':'');
+  const cv='<span class="pcv" style="background:linear-gradient(135deg,hsl('+h+' 55% 40%),hsl('+((h+50)%360)+' 60% 22%))"><b aria-hidden="true">'+X((p.name||'?').trim().charAt(0).toUpperCase()||'♪')+'</b><span class="pcp"><i style="width:'+st.pct+'%"></i></span></span>';
+  const meta=st.n+' líneas · '+st.pct+'% con tiempo';
+  const d=document.createElement('div');d.className=hero?'pkhero':'pc';
+  d.innerHTML='<button class="pco" data-id="'+id+'" title="Abrir «'+X(p.name)+'»">'+cv+(hero?'<span class="tx"><small>Seguir donde quedaste</small><span class="nm">'+X(p.name)+'</span><span class="ar">'+X(ar)+(p.album?(ar?' · ':'')+'💿 '+X(p.album):'')+'</span><span class="m2">'+meta+' · '+new Date(p.upd).toLocaleString('es',{dateStyle:'medium',timeStyle:'short'})+'</span><span class="chs">'+chips+'</span></span>'
+    :'<span class="nm">'+X(p.name)+'</span><span class="ar">'+X(ar||(p.album?'💿 '+p.album:''))+'</span><span class="m2">'+meta+'</span><span class="chs">'+chips+'</span>')+'</button><button class="pcd" data-id="'+id+'" title="Borrar proyecto" aria-label="Borrar «'+X(p.name)+'»">✕</button>';
+  return d;
+}
 function pkRender(){
-  const ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd),box=$('pkl');box.innerHTML='';
-  if(!ids.length)box.innerHTML='<p class="mu">Todavía no tenés proyectos. Creá el primero abajo.</p>';
-  ids.forEach((id,i)=>{
-    const p=PR.list[id],Lp=p.L||[],nw=Lp.reduce((n,l)=>n+l.w.length,0),nt=Lp.reduce((n,l)=>n+l.w.filter(x=>x.s!=null).length,0),pct=nw?Math.round(nt/nw*100):0;
-    const d=document.createElement('div');d.className='pc';
-    d.innerHTML='<button class="pco" data-id="'+id+'"><span class="nm">'+X(p.name)+(p.album?' <span class="alb">💿 '+X(p.album)+'</span>':'')+(i===0?' · último usado':'')+'</span><span class="m2">'+Lp.length+' líneas · '+pct+'% con tiempo · '+new Date(p.upd).toLocaleString('es',{dateStyle:'medium',timeStyle:'short'})+(p.audio?' · '+X(p.audio)+(p.asv?' (guardado)':''):'')+'</span><span class="b2"><i style="width:'+pct+'%"></i></span></button><button class="pcd" data-id="'+id+'" title="Borrar proyecto" aria-label="Borrar proyecto">✕</button>';
-    box.appendChild(d);
+  const box=$('pkl'),q=($('pks').value||'').trim().toLowerCase(),mode=$('pko').value;
+  pkUrls.forEach(u=>URL.revokeObjectURL(u));pkUrls=[];const tok=++pkTok;
+  box.innerHTML='';
+  let ids=Object.keys(PR.list).sort((x,y)=>PR.list[y].upd-PR.list[x].upd);
+  if(!ids.length){box.innerHTML='<p class="mu">Todavía no tenés proyectos. Creá el primero arriba.</p>';$('pkx').hidden=!PR.cur;return}
+  const last=ids[0];
+  if(q)ids=ids.filter(id=>{const p=PR.list[id];return (p.name+' '+(p.album||'')+' '+artGet(id)).toLowerCase().includes(q)});
+  if(mode==='nom')ids.sort((x,y)=>PR.list[x].name.localeCompare(PR.list[y].name,'es',{sensitivity:'base'}));
+  else if(mode==='sync')ids.sort((x,y)=>pkStat(PR.list[y]).pct-pkStat(PR.list[x]).pct||PR.list[y].upd-PR.list[x].upd);
+  if(!q&&mode==='rec'&&PR.list[last]){box.appendChild(pkCard(last,true));ids=ids.filter(id=>id!==last)}
+  if(!ids.length&&q)box.innerHTML='<p class="mu">No hay proyectos que coincidan con «'+X(q)+'».</p>';
+  const groups=[];
+  if(mode==='alb'){
+    const m=new Map();ids.forEach(id=>{const a=projAlbum(id)||'';(m.get(a)||m.set(a,[]).get(a)).push(id)});
+    [...m.keys()].sort((a,b)=>!a?1:!b?-1:a.localeCompare(b,'es',{sensitivity:'base'})).forEach(a=>groups.push([a?'💿 '+a:'Sin álbum',m.get(a)]));
+  }else if(ids.length)groups.push([mode==='rec'&&!q?'Todos los proyectos':'',ids]);
+  groups.forEach(([t,list])=>{
+    const g=document.createElement('section');g.className='pkg';
+    if(t)g.innerHTML='<h2>'+X(t)+' <small>'+list.length+'</small></h2>';
+    const gr=document.createElement('div');gr.className='pkgrid';list.forEach(id=>gr.appendChild(pkCard(id,false)));g.appendChild(gr);box.appendChild(g);
+  });
+  /* portadas (las del álbum o las propias), cargadas aparte */
+  box.querySelectorAll('.pco[data-id]').forEach(async b=>{
+    const id=b.dataset.id;let bl=null;try{bl=await adbGet(coverKey(id))||await adbGet('cover:'+id)}catch(e){}
+    if(!bl||tok!==pkTok)return;const u=URL.createObjectURL(bl);pkUrls.push(u);
+    const v=b.querySelector('.pcv');if(!v)return;const im=new Image();im.alt='';im.onload=()=>{if(tok===pkTok){v.prepend(im);const t=v.querySelector('b');if(t)t.remove()}};im.src=u;
   });
   $('pkx').hidden=!PR.cur;
 }
-function openPicker(forced){pkRender();$('pk').hidden=false;document.body.style.overflow='hidden';$('pkx').hidden=!!forced||!PR.cur;$('pkn').value='';const f=$('pkl').querySelector('.pco');(f||$('pkn')).focus()}
+$('pks').addEventListener('input',()=>pkRender());
+$('pko').value=getMeta().pksort||'rec';
+$('pko').addEventListener('change',()=>{setMeta({pksort:$('pko').value});pkRender()});
+function openPicker(forced){pkRender();$('pk').hidden=false;document.body.style.overflow='hidden';$('pkx').hidden=!!forced||!PR.cur;$('pkn').value='';$('pks').value='';const f=$('pkl').querySelector('.pco');(f||$('pkn')).focus()}
 function closePicker(){$('pk').hidden=true;document.body.style.overflow=''}
 function pkCreate(){openProj(newProj($('pkn').value.trim()||'Sin título'));unloadAudio();pjUI()}
 $('chg').onclick=()=>{save();openPicker(false)};
@@ -3816,13 +3870,13 @@ function kcvApply(){
   if($('kcs')){$('kcsh').value=m.kpsh||'circ';$('kcs').checked=m.kpcs!==false;$('kcb').checked=!!m.kpcb;$('kcxr').disabled=!has}
 }
 /* Álbumes: etiqueta por proyecto; los proyectos del mismo álbum comparten portada y artista */
-const albKey=n=>String(n||'').trim().toLowerCase();
-const projAlbum=id=>{const p=PR.list[id];return p&&p.album?String(p.album).trim():''};
-const coverKey=id=>projAlbum(id)?'cover:album:'+albKey(projAlbum(id)):'cover:'+id;
+function albKey(n){return String(n||'').trim().toLowerCase()}
+function projAlbum(id){const p=PR.list[id];return p&&p.album?String(p.album).trim():''}
+function coverKey(id){return projAlbum(id)?'cover:album:'+albKey(projAlbum(id)):'cover:'+id}
 /* Artista: el álbum guarda uno «por defecto» que toman las canciones nuevas del álbum; si se cambia en una canción, el cambio es solo de esa canción */
-const artGet=id=>{const k=getMeta().kart||{};if(id&&Object.prototype.hasOwnProperty.call(k,id))return k[id]||'';const al=projAlbum(id);return al?(k[artKey(id)]||''):''};
+function artGet(id){const k=getMeta().kart||{};if(id&&Object.prototype.hasOwnProperty.call(k,id))return k[id]||'';const al=projAlbum(id);return al?(k[artKey(id)]||''):''}
 let kcaDef=false;
-const artKey=id=>projAlbum(id)?'album:'+albKey(projAlbum(id)):id;
+function artKey(id){return projAlbum(id)?'album:'+albKey(projAlbum(id)):id}
 function albUI(){
   const el=$('pjal');if(!el)return;
   if(document.activeElement!==el)el.value=projAlbum(PR.cur);
