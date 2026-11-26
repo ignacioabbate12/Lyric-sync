@@ -257,6 +257,10 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 @keyframes kbis2{from{transform:translate3d(6%,4%,0) rotate(14deg) scale(1.35)}to{transform:translate3d(-6%,-5%,0) rotate(-12deg) scale(1.08)}}
 #kcv{display:none;position:absolute;z-index:1;left:8vw;top:50%;transform:translateY(-52%);width:min(32vw,56vh);flex-direction:column;gap:14px;pointer-events:none}
 #kp.cov #kcv{display:flex}
+#kcvw{position:relative;width:100%}
+#kp #kpc{display:none;position:absolute;left:50%;bottom:4%;transform:translateX(-50%);width:16%;aspect-ratio:1;max-width:72px;border-radius:50%;background:transparent;border:0;color:#fff;font-size:clamp(28px,4vw,56px);line-height:1;padding:0;cursor:pointer;pointer-events:auto;text-shadow:0 0 3px rgba(0,0,0,.9),0 2px 14px rgba(0,0,0,.8);opacity:1;transition:transform .15s;align-items:center;justify-content:center}
+#kp #kpc:hover{background:transparent;transform:translateX(-50%) scale(1.1)}
+#kpc:focus-visible{outline:2px solid #fff;outline-offset:2px}
 #kcvi{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:14px;box-shadow:0 20px 70px rgba(0,0,0,.55)}
 #kcvt{font:800 clamp(18px,2.4vw,40px)/1.15 system-ui,sans-serif;text-shadow:0 2px 12px rgba(0,0,0,.35);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase}
 #kcva{font:500 clamp(14px,1.6vw,26px)/1.2 system-ui,sans-serif;text-align:center;opacity:.85}#kcva:empty{display:none}
@@ -266,7 +270,7 @@ textarea{width:100%;min-height:150px;margin-top:12px;background:var(--bg);border
 #kcbi{display:block;height:100%;width:0;background:#fff;border-radius:99px;position:relative}
 #kcbi::after{content:"";position:absolute;right:calc(clamp(14px,1.5vw,22px)/-2);top:50%;width:clamp(14px,1.5vw,22px);height:clamp(14px,1.5vw,22px);margin-top:calc(clamp(14px,1.5vw,22px)/-2);border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.45);transform:scale(.01);transition:transform .15s}
 #kcbg:hover #kcbi::after,#kcbg.dn #kcbi::after{transform:scale(1)}
-@media (min-aspect-ratio:1/1) and (min-width:760px){#kp.cov #kpg,#kp.cov #kpm{display:none}#kp.cov #kpw{margin-left:calc(min(32vw,56vh) + 11vw)}}
+@media (min-aspect-ratio:1/1) and (min-width:760px){#kp.cov #kpg,#kp.cov #kpm,#kp.cov #kpp{display:none}#kp.cov #kpc{display:flex}#kp.cov #kpw{margin-left:calc(min(32vw,56vh) + 11vw)}}
 @media (max-aspect-ratio:1/1),(max-width:759px){#kp.cov #kcv{display:none}}
 #kcp{position:absolute;z-index:8;top:64px;right:12px;width:min(330px,calc(100vw - 24px));background:rgba(18,22,21,.96);border:1px solid rgba(255,255,255,.15);border-radius:16px;padding:14px;display:grid;gap:12px;box-shadow:0 10px 40px rgba(0,0,0,.5);font-size:13px}
 #kcp .btn{justify-content:center;border:1px solid rgba(255,255,255,.3);color:#fff;background:rgba(255,255,255,.1)}#kcp .ck{display:flex;gap:8px;align-items:flex-start}
@@ -371,6 +375,8 @@ button,.btn,select{touch-action:manipulation}
 #kp select,#kp button{background:rgba(255,255,255,.14);color:#fff;border:1px solid transparent}
 #kp button:hover{border-color:#fff}
 #kp .pri{background:#1ed760;color:#04140a}
+#kp #kpp{background:transparent;color:#fff;box-shadow:none;border:0;font-size:22px;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+#kp #kpp:hover{background:rgba(255,255,255,.12)}
 #kp label{display:flex;align-items:center;gap:6px;font-size:13px;opacity:.85}
 #kpw{position:relative;z-index:1;flex:1;min-height:0}
 #kpl{position:absolute;inset:0;overflow-y:auto;scrollbar-width:none;container-type:size}
@@ -647,7 +653,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <div id="kfm" hidden role="dialog" aria-label="Tipografía y tamaño"></div>
   <div id="kbg" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
   <canvas id="kbi" width="24" height="24" aria-hidden="true"></canvas><canvas id="kbi2" width="24" height="24" aria-hidden="true"></canvas>
-  <div id="kcv"><img id="kcvi" alt=""><div class="kcb"><span id="kcb1">0:00</span><div id="kcbg" role="slider" aria-label="Posición" tabindex="-1"><i id="kcbi"></i></div><span id="kcb2">0:00</span></div><b id="kcvt"></b><span id="kcva"></span></div>
+  <div id="kcv"><div id="kcvw"><img id="kcvi" alt=""><button id="kpc" type="button" aria-label="Reproducir o pausar">▶</button></div><div class="kcb"><span id="kcb1">0:00</span><div id="kcbg" role="slider" aria-label="Posición" tabindex="-1"><i id="kcbi"></i></div><span id="kcb2">0:00</span></div><b id="kcvt"></b><span id="kcva"></span></div>
   <div id="kcp" hidden role="dialog" aria-label="Portada"></div>
   <div id="kq" hidden role="dialog" aria-label="Cola de reproducción"><div class="kqhd"><b>Cola de reproducción</b><button id="kqx" aria-label="Cerrar la cola">✕</button></div><div class="kqnow"><small>Suena ahora</small><div id="kqn">—</div></div><div class="kqhd2"><small id="kqt">A continuación</small><span><button id="kqsh" title="Mezclar lo que queda de la cola">🔀 Mezclar</button><button id="kqre" title="Armar la cola de nuevo con todas las canciones">↺ Rehacer</button></span></div><ol id="kql"></ol><div class="kqad"><select id="kqa" aria-label="Canción para agregar"></select><button id="kqnx">A continuación</button><button id="kqad">Al final</button></div></div>
   <div class="kpt"><b id="kpn"></b><span class="sep"></span>
@@ -1635,7 +1641,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.61',PK='lyricsync_projects';
+const APP_VERSION='3.63',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -3078,7 +3084,7 @@ function kpTick(){
   const dur=kp.virt?kp.vdur:a.duration;
   $('kpgi').style.width=dur?(c01(t/dur)*100)+'%':'0';
   if($('kp').classList.contains('cov')){const fm=v=>{v=Math.max(0,v|0);return(v/60|0)+':'+('0'+v%60).slice(-2)},a1=fm(t),a2=dur&&isFinite(dur)?fm(dur):'0:00';
-    $('kcbi').style.width=dur?(c01(t/dur)*100)+'%':'0';if($('kcb1').textContent!==a1)$('kcb1').textContent=a1;if($('kcb2').textContent!==a2)$('kcb2').textContent=a2}$('kpm').textContent=F(t);$('kpp').textContent=kpPaused()?'▶':'⏸';
+    $('kcbi').style.width=dur?(c01(t/dur)*100)+'%':'0';if($('kcb1').textContent!==a1)$('kcb1').textContent=a1;if($('kcb2').textContent!==a2)$('kcb2').textContent=a2}$('kpm').textContent=F(t);$('kpp').textContent=$('kpc').textContent=kpPaused()?'▶':'⏸';
 }
 function kpClose(){if(kj.on){kjExit();return}kp.vplay=false;kpImm(false);kpRestoreRate();$('kthm').hidden=true;$('kp').hidden=true;document.body.style.overflow='';try{if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
 function kpStart(){
@@ -3093,6 +3099,7 @@ function kpStart(){
 }
 $('kpo').onclick=kpStart;
 $('kpx').onclick=kpClose;
+$('kpc').onclick=()=>$('kpp').click();
 $('kpp').onclick=()=>{if(kp.virt){kp.vplay=!kp.vplay;if(kp.vplay&&kp.vt>=kp.vdur)kp.vt=0}else a.paused?a.play():a.pause()};
 (function(){
   const g=$('kpg');let dn=false;
@@ -3270,7 +3277,7 @@ function kjExit(){
   if(audioMode!=='full'){const ps=()=>{try{a.pause()}catch(e){}};a.addEventListener('loadedmetadata',ps,{once:true});setAudioMode('full').then(()=>{ps();setTimeout(ps,400);setTimeout(ps,1200)}).catch(()=>{})}
   $('pj').open=true;setTimeout(()=>{try{$('pj').scrollIntoView({block:'start'})}catch(e){}},60);
 }
-$('kjo').onclick=()=>kjStart();
+$('kjo').onclick=()=>kjStart(PR.cur);
 $('kje').onclick=kjEnter;
 $('kjc').onclick=()=>kjStart(PR.cur);
 $('pkkj').onclick=()=>kjStart();
