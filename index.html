@@ -487,6 +487,53 @@ dialog{background:var(--pn);color:var(--tx);border:1px solid var(--ln);border-ra
 dialog::backdrop{background:rgba(0,0,0,.6)}
 dialog h2{margin:0 0 6px;font:italic 700 22px Georgia,serif}
 dialog p{margin:6px 0;color:var(--mu)}
+
+/* ===== Rediseño de la pantalla de sincronización (v3.67) ===== */
+.bar{padding:12px 20px 8px}
+.deck{border:1px solid var(--ln);border-radius:20px;padding:10px 12px;gap:8px 10px}
+.deck .vsep{width:1px;height:26px;background:var(--ln);margin:0 2px}
+.deck .sep{flex:1}
+.mode{display:inline-flex;background:var(--pn2);border-radius:99px;padding:3px;gap:2px}
+.mode button{background:transparent;border:0;border-radius:99px;padding:.45em 1.1em;font-weight:600;color:var(--mu)}
+.mode button::before{display:none}
+.mode button[aria-pressed=true]{background:var(--ac);color:var(--acx)}
+#mk{font-size:16px;font-weight:800;padding:.6em 1.5em}
+.pop{position:relative}
+#cfg{position:absolute;right:0;top:calc(100% + 8px);z-index:30;width:290px;background:var(--pn);border:1px solid var(--ln);border-radius:16px;box-shadow:0 14px 40px rgba(0,0,0,.28);padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+#cfg[hidden]{display:none}
+#cfg label{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--ln);font-size:14px;color:var(--tx)}#cfg label:first-child{border-top:0}
+#st{margin:8px 0 0;padding:8px 14px;border-radius:12px;background:color-mix(in srgb,var(--ac) 9%,transparent);color:var(--mu);font-size:13.5px}
+#st:empty{display:none}
+/* herramientas */
+#tools,#tools2{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 6px}#tools2{margin-top:0}#tools2[hidden]{display:none}
+.acc{flex:1 1 150px;max-width:260px;border-radius:14px;border:1px solid var(--ln);background:var(--pn);padding:9px 14px;text-align:left;gap:10px;font-weight:600;justify-content:flex-start}
+.acc .ic{font-size:19px}.acc .tt{display:flex;flex-direction:column;line-height:1.25}.acc small{font-weight:400;color:var(--mu);font-size:12px}
+.acc[aria-pressed=true]{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,var(--pn))}
+.acc .bdg{margin-left:auto;font-size:11px;font-weight:700;background:#c98a1b;color:#fff;border-radius:99px;padding:1px 8px}.acc .bdg[hidden]{display:none}
+main details.tp{display:none;margin:8px 0 14px;border:1px solid var(--ln)}
+main details.tp[open]{display:block}
+main details.tp>summary{font-weight:700;margin-bottom:6px}
+/* progreso */
+.psum{display:flex;align-items:center;gap:12px;margin:14px 2px 12px}.psum b{font-size:17px;white-space:nowrap}
+.pbar{flex:1;height:8px;border-radius:99px;background:var(--pn2);overflow:hidden}.pbar i{display:block;height:100%;width:0;background:var(--ac);transition:width .2s}
+.psum .mu{white-space:nowrap;font-size:13px}
+/* líneas como tarjetas */
+.ln{background:var(--pn);border:1px solid var(--ln);border-radius:18px;padding:12px 14px;margin:0 0 10px;transition:border-color .15s,box-shadow .15s}
+.ln.act,.ln:focus-within,.ln:has(.w.cur),.ln:has(.w.curend){border-color:var(--ac);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 20%,transparent)}
+.ln.bg{margin-left:34px}
+.ln::before{padding-top:7px}
+.w{border-radius:12px;border-width:1.5px;border-top-width:4px;padding:5px 11px 7px;background:var(--bg)}
+.w:not(.un){background:var(--pn)}
+.ln:hover .ctl,.ln.act .ctl{opacity:1}
+.ctl{display:grid;grid-template-columns:repeat(2,26px);gap:4px;align-content:start}.ctl .grip{display:flex;align-items:center;justify-content:center}
+.meta{display:none;order:99;opacity:1;flex-wrap:wrap;gap:8px 12px;padding-top:10px;margin-top:4px;border-top:1px dashed var(--ln)}
+.ln.act .meta,.ln:focus-within .meta,.ln:has(.w.cur) .meta,.ln:has(.w.curend) .meta,.ln.splitting .meta{display:flex}
+.meta .gp{display:flex;align-items:center;gap:4px;flex-wrap:wrap;background:var(--pn2);border-radius:99px;padding:3px 5px 3px 12px}
+.meta .gl{font-size:12px;color:var(--mu);margin:0 4px 0 0}.meta .gp .gl:not(:first-child){margin-left:8px}
+.meta .gp button{background:var(--pn)}.meta .gp button:hover{background:var(--ac);color:var(--acx)}
+.meta .gp button[aria-pressed=true]{background:var(--ac);color:var(--acx)}
+.meta .gp.dng{padding-left:5px}.meta .gp.dng button:hover{background:var(--wn);color:#fff}
+@media (max-width:700px){.bar{padding:10px 12px 8px}.acc{flex:1 1 140px;max-width:none}.psum{flex-wrap:wrap}}
 </style></head>
 <body>
 <div class="bar">
@@ -500,19 +547,19 @@ dialog p{margin:6px 0;color:var(--mu)}
     <select id="sp" title="Velocidad de reproducción"><option value=".5">0.5×</option><option value=".75">0.75×</option><option value="1" selected>1×</option></select>
   </div>
   <div class="deck">
-    <button id="sy" class="tg" aria-pressed="false" title="Activa el modo de marcado con el teclado">Sincronizar</button>
+    <div class="mode" role="group" aria-label="Modo de trabajo"><button id="sye" type="button" aria-pressed="true" title="Editar letra y tiempos sin marcar con el teclado">Editar</button><button id="sy" class="tg" aria-pressed="false" title="Activa el modo de marcado con el teclado">Sincronizar</button></div>
     <button id="mk" class="pri" disabled title="Marca el inicio de la palabra siguiente">Marcar palabra <kbd>espacio</kbd></button>
     <button id="un" disabled>Quitar marca <kbd>⌫</kbd></button>
+    <button id="hu" disabled title="Deshacer el último cambio">↶ Deshacer <kbd>Ctrl Z</kbd></button>
+    <button id="hr" disabled title="Rehacer">↷ Rehacer</button>
+    <span class="vsep"></span>
     <button id="fl" class="tg" aria-pressed="false" title="Mientras suena la canción, la pantalla baja sola siguiendo la letra">Seguir la letra</button>
     <button id="wt" class="tg" aria-pressed="false" title="Muestra la onda del audio con las palabras encima">Onda</button>
     <button id="hold" class="tg" aria-pressed="false" title="Si lo activás: mantené la tecla (o el botón) mientras suena la palabra y soltala cuando termina. Marca inicio y fin de una vez.">Mantener presionado</button>
-    <button id="kpo" title="Ver la letra como en un reproductor, a pantalla completa">Vista previa</button>
-    <button id="hu" disabled title="Deshacer el último cambio">↶ Deshacer <kbd>Ctrl Z</kbd></button>
-    <button id="hr" disabled title="Rehacer">↷ Rehacer</button>
     <span class="sep"></span>
-    <label class="mu">Compensación <input id="comp" type="number" value="100" step="10" style="width:68px"> ms</label>
-    <label class="mu">Paso <input id="stp" type="number" value="50" step="10" style="width:64px"> ms</label>
-    <label class="mu"><input id="auto" type="checkbox" checked> Fin de línea automático</label>
+    <button id="kpo" title="Ver la letra como en un reproductor, a pantalla completa">Vista previa</button>
+    <span class="pop"><button id="cfgb" type="button" aria-expanded="false" aria-controls="cfg" title="Compensación, paso y fin de línea automático">⚙ Ajustes</button>
+      <div id="cfg" hidden><label class="mu">Compensación <input id="comp" type="number" value="100" step="10" style="width:68px"> ms</label><label class="mu">Paso <input id="stp" type="number" value="50" step="10" style="width:64px"> ms</label><label class="mu"><input id="auto" type="checkbox" checked> Fin de línea automático</label></div></span>
   </div>
   <div id="st"></div>
   <div id="wvb" hidden>
@@ -541,13 +588,14 @@ dialog p{margin:6px 0;color:var(--mu)}
 </div>
 <main>
 <div id="rem" class="rem" hidden></div>
-<details open id="pj"><summary>Proyectos</summary>
+<div id="tools" role="group" aria-label="Herramientas"></div><div id="tools2" role="group" aria-label="Más herramientas" hidden></div>
+<details id="pj" class="tp"><summary>Proyectos</summary>
   <div class="row"><button id="kjo" class="pri" title="Abre un reproductor de karaoke con tus proyectos que tengan audio y letra sincronizada: elige uno al azar y pasa solo a la siguiente">🎤 Reproductor karaoke</button><button id="kjc" title="Abre el reproductor empezando por el proyecto elegido arriba">Reproducir este proyecto</button><span class="mu">Solo se reproduce: no se edita nada. Al salir volvés acá.</span></div>
   <div class="row"><select id="pjs" aria-label="Proyecto"></select><button id="pjnew">Nuevo</button><button id="pjdup">Duplicar</button><button id="pjren">Renombrar</button><button id="pjdel">Borrar</button><button id="audx" title="Quita el audio guardado de este proyecto (la letra y los tiempos no se tocan)">Quitar audio</button><button id="bkx" title="Guarda todos tus proyectos en un archivo (sin los audios)">Exportar respaldo</button><label class="btn" title="Recupera proyectos desde un respaldo">Importar respaldo<input id="bki" type="file" accept=".json,application/json" hidden></label><button id="ins" class="pri" hidden>Instalar como app</button></div>
   <div class="row"><label>Álbum <input id="pjal" type="text" list="pjall" maxlength="60" placeholder="Etiqueta de álbum (opcional)" style="min-width:230px"></label><datalist id="pjall"></datalist><button id="pjalx" title="Quitar la etiqueta de álbum de este proyecto">Quitar álbum</button><label class="btn" title="La portada se guarda en el álbum: todos sus proyectos la comparten">🖼 Portada<input id="pjcf" type="file" accept="image/*" hidden></label></div>
   <p id="pjinfo" class="mu" style="margin:8px 0 0"></p>
 </details>
-<details open><summary>Letra e importación</summary>
+<details id="ltd" class="tp"><summary>Letra e importación</summary>
   <div class="row">
     <label class="btn">Importar .lrc / .ttml / .txt<input id="lf" type="file" accept=".lrc,.ttml,.xml,.txt" hidden></label>
     <button id="ap">Aplicar texto</button>
@@ -557,7 +605,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   </div>
   <textarea id="tx" placeholder="Pegá acá la letra…"></textarea>
 </details>
-<details id="aud-sec"><summary>Sincronización automática (beta)</summary>
+<details id="aud-sec" class="tp"><summary>Sincronización automática (beta)</summary>
   <p class="mu">Escucha la canción dentro de tu navegador (con Whisper), empareja lo que reconoce con <b>tu letra</b> y propone el tiempo de cada palabra. La primera vez descarga el modelo (hace falta internet) y después queda guardado. Es un borrador: afinalo con la onda, el imán y los ajustes en milisegundos.</p>
   <div class="row">
     <label class="mu">Modelo <select id="aum"><option value="onnx-community/whisper-large-v3-turbo_timestamped">Turbo (~1,5 GB, la más precisa, necesita WebGPU)</option><option value="onnx-community/whisper-small_timestamped">Small (~600 MB)</option><option value="onnx-community/whisper-base_timestamped">Base (~200 MB, la más rápida y la menos precisa)</option></select></label>
@@ -583,7 +631,7 @@ dialog p{margin:6px 0;color:var(--mu)}
   <div id="aubar" hidden><i id="aubi"></i></div>
   <audio id="ausa" controls hidden style="width:100%;margin-top:10px"></audio>
 </details>
-<details id="chd"><summary>Acordes</summary>
+<details id="chd" class="tp"><summary>Acordes</summary>
   <p class="mu" style="margin:0 0 10px">Cargá un archivo con los acordes de la canción (.txt, .cho, .pro). Puede traer los acordes arriba de la letra, en formato ChordPro (<code>[Am]Tengo unos [G]tatuajes</code>) o solo la progresión por compases y secciones (<code>[Estrofa]</code> <code>| Am | G |</code>, con <code>x2</code> para repetir). Sirven nombres americanos (C, Am7, F#m) y latinos (Do, Lam, Sol7). Si trae la letra, la app busca cada línea en la de este proyecto y pone el acorde cuando se canta esa palabra; si no la trae, reparte los compases según los tiempos de tu letra. En los dos casos primero cargá y sincronizá la letra.</p>
   <div class="row"><label class="btn pri" style="cursor:pointer">Cargar acordes de un archivo…<input id="chfile" type="file" accept=".txt,.cho,.chopro,.chordpro,.crd,.pro,text/plain" hidden></label><span id="chst" class="mu"></span></div>
   <div class="row">
@@ -600,7 +648,7 @@ dialog p{margin:6px 0;color:var(--mu)}
     <div class="row"><button id="chdl">Descargar letra con acordes (.txt)</button><button id="chcp">Copiar letra con acordes</button><button id="chclr">Borrar acordes</button></div>
   </div>
 </details>
-<details><summary>Cómo se usa</summary><ol>
+<details id="hwd" class="tp"><summary>Cómo se usa</summary><ol>
   <li>Cargá el audio y pegá la letra (o importá un .lrc / .ttml), y tocá <b>Aplicar texto</b>.</li>
   <li>Activá <b>Sincronizar</b>, dale play y apretá <kbd>espacio</kbd> justo cuando empieza cada palabra. La palabra con borde rosa es la siguiente en marcar.</li>
   <li><kbd>⌫</kbd> deshace la última marca y vuelve el audio 1 segundo. <kbd>Enter</kbd> hace play/pausa y <kbd>←</kbd> <kbd>→</kbd> saltan 3 s.</li>
@@ -624,14 +672,14 @@ dialog p{margin:6px 0;color:var(--mu)}
   <li><b>Separar la voz:</b> aísla la voz de los instrumentos antes de analizar. Se guarda con el proyecto (la segunda vez no hay que repetirla) y con «Oír la voz separada» puedes comprobar cómo quedó. Con la voz aislada, las pausas entre palabras también se detectan mejor.</li>
   <li>Clic en el borde de una palabra la reproduce. <kbd>Shift</kbd> + clic mueve el cursor de sincronización ahí.</li>
 </ol></details>
-<details id="avd"><summary id="avs">Avisos</summary><div id="av"></div></details>
-<details id="dud"><summary id="duds">Palabras dudosas</summary>
+<details id="avd" class="tp"><summary id="avs">Avisos</summary><div id="av"></div></details>
+<details id="dud" class="tp"><summary id="duds">Palabras dudosas</summary>
   <p class="mu" style="margin:0 0 8px">Junta las palabras que conviene revisar: las que la sincronización automática estimó o dudó, las que duran muy poco o demasiado, las que se pisan con la siguiente y las que tienen un hueco raro. «Siguiente» te lleva a cada una, la reproduce y, si está bien, la marcás como revisada.</p>
   <div class="row"><button id="dprev">◀ Anterior</button><button id="dnext" class="pri">Siguiente dudosa ▶</button><button id="dlis">▶ Oír</button><button id="dok">✓ Está bien</button><label class="mu"><input id="dun" type="checkbox"> Incluir las sin tiempo</label></div>
   <div class="row"><button id="dall">Marcar todas como revisadas</button><button id="drst">Volver a revisar todas</button><span id="dcur" class="mu"></span></div>
   <div id="dl"></div>
 </details>
-<details id="rmd"><summary>Control remoto (otra ventana o celular)</summary>
+<details id="rmd" class="tp"><summary>Control remoto (otra ventana o celular)</summary>
   <p class="mu" style="margin:8px 0">Controlá la reproducción —pausa, anterior, siguiente, posición, velocidad, vista previa y pantalla completa— desde otra ventana de esta misma computadora, o desde el celular.</p>
   <div class="row"><button id="rmw" class="pri">Abrir ventana de control</button><span id="rms" class="mu" role="status"></span></div>
   <h3 style="margin:16px 0 4px;font-size:15px">Celular (sin servidor, por Wi-Fi)</h3>
@@ -643,20 +691,21 @@ dialog p{margin:6px 0;color:var(--mu)}
   <textarea id="rma" placeholder="Pegá acá el código de respuesta del celular" aria-label="Código de respuesta" hidden></textarea>
   <div class="row" id="rmar" hidden><button id="rmk" class="pri">Conectar</button><button id="rmsc" hidden>📷 Escanear la respuesta del celular</button></div>
 </details>
-<details id="vh"><summary id="vhs">Versiones del proyecto</summary>
+<details id="vh" class="tp"><summary id="vhs">Versiones del proyecto</summary>
   <p class="mu" style="margin:0 0 8px">Guarda copias de la letra y sus tiempos para volver atrás cuando quieras. Se guardan solas antes de sincronizar automáticamente, antes de restaurar otra versión y cada 10 minutos si hubo cambios (las automáticas más viejas se borran solas; las que guardás vos, no). No incluyen el audio.</p>
   <div class="row"><input id="vn" type="text" placeholder="Nombre de la versión (opcional)" style="min-width:240px"><button id="vsv" class="pri">Guardar versión ahora</button><button id="vda">Eliminar las automáticas</button><button id="vdx">Eliminar todas</button></div>
   <div id="vl"></div>
 </details>
 <div id="wbar" hidden><b id="wbc"></b><button data-w="m">−paso</button><button data-w="p">+paso</button><button data-w="c" title="Borra el inicio y el fin de las palabras seleccionadas">Borrar tiempos</button><button data-w="u" title="Une las palabras seleccionadas (seguidas y pegadas) en una sola">Unir</button><button data-w="g" title="Pega a la palabra anterior (sin espacio)">Pegar</button><button data-w="s" title="Pone un espacio con la palabra anterior">Separar</button><button data-w="x">Deseleccionar</button></div>
 <div id="selbar" class="rem" hidden><b id="selc"></b><button data-s="v1">Voz 1</button><button data-s="v2">Voz 2</button><button data-s="bg1">Fondo: sí</button><button data-s="bg0">Fondo: no</button><button data-s="dup">Duplicar</button><button data-s="join">Unir en una</button><button data-s="del">Eliminar</button><button data-s="none">Quitar selección</button></div>
+<div class="psum"><b id="psl">0 de 0 líneas</b><div class="pbar"><i id="psb"></i></div><span id="psw" class="mu"></span></div>
 <div id="ls"></div>
 <div class="row"><button id="addl" title="Agrega una línea nueva sin tocar las demás">＋ Agregar línea al final</button><button id="selall" title="Selecciona todas las líneas para hacer ajustes en conjunto">Seleccionar todas</button></div>
-<details open><summary>Exportar y herramientas</summary>
+<details id="exd" class="tp"><summary>Exportar y herramientas</summary>
   <div class="row">
     <label class="mu">Idioma <input id="lang" type="text" value="es" style="width:54px"></label>
     <button id="dt" class="pri">Descargar .ttml</button>
-    <button id="dl">Descargar .lrc</button>
+    <button id="dlrc">Descargar .lrc</button>
     <button id="cp">Copiar .ttml</button>
     <label class="mu"><input id="par" type="checkbox" checked> Paréntesis en voces de fondo</label>
   </div>
@@ -1660,7 +1709,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.66',PK='lyricsync_projects';
+const APP_VERSION='3.67',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
@@ -1688,10 +1737,10 @@ let dudCache=new Map(),wsel=new Set();
 function buildRow(ln,i,st){
     const row=document.createElement('div');row.className='ln';row.dataset.i=i;
     row.innerHTML=`<div class="ctl"><span class="grip" draggable="true" data-l="${i}" title="Arrastrá para mover la línea (si hay varias seleccionadas, se mueven juntas)">⠿</span><input type="checkbox" class="lsel" data-l="${i}" ${sel.has(ln)?'checked':''} aria-label="Seleccionar línea" title="Seleccionar (con Shift: rango)"><button data-a="play" data-l="${i}" title="Reproducir esta línea">▶</button><button data-a="here" data-l="${i}" title="Sincronizar desde esta línea">◎</button><button data-a="del" data-l="${i}" title="Borrar línea">✕</button></div>`;
-    row.className='ln'+(ln.v===2?' v2':'')+(ln.bg?' bg':'')+(splitL===i?' splitting':'')+(sel.has(ln)?' sel':'');
+    row.className='ln'+(ln.v===2?' v2':'')+(ln.bg?' bg':'')+(splitL===i?' splitting':'')+(sel.has(ln)?' sel':'')+(actI===i?' act':'');
     const ws=document.createElement('div');ws.className='ws';chips[i]=[];
     const mt=document.createElement('div');mt.className='meta';
-    mt.innerHTML=`<button data-a="v" data-l="${i}" aria-pressed="${ln.v===2}" title="Cantante secundario">Voz 2</button><button data-a="bg" data-l="${i}" aria-pressed="${!!ln.bg}" ${i===0?'disabled':''} title="Voz de fondo de la línea anterior">Fondo</button><span class="mu">Retraso</span><button data-a="sh" data-l="${i}" data-d="-1" title="Adelantar solo esta línea">−${st}</button><button data-a="sh" data-l="${i}" data-d="1" title="Atrasar solo esta línea">+${st}</button><span class="mu">desde aquí</span><button data-a="sh" data-l="${i}" data-all="1" data-d="-1" title="Adelantar esta línea y todas las siguientes">−${st}</button><button data-a="sh" data-l="${i}" data-all="1" data-d="1" title="Atrasar esta línea y todas las siguientes">+${st}</button><button data-a="clr" data-l="${i}" title="Borrar los tiempos de esta línea">Borrar tiempos</button><button data-a="split" data-l="${i}" aria-pressed="${splitL===i}" title="Dividir esta línea en dos">Dividir</button><button data-a="join" data-l="${i}" ${i===0?'disabled':''} title="Unir con la línea anterior">Unir ↑</button><button data-a="addu" data-l="${i}" title="Línea nueva arriba">＋↑</button><button data-a="addd" data-l="${i}" title="Línea nueva abajo">＋↓</button><button data-a="dup" data-l="${i}" title="Duplicar esta línea (sin tiempos)">Duplicar</button><button data-a="mu" data-l="${i}" ${i===0?'disabled':''} title="Subir una posición">↑</button><button data-a="md" data-l="${i}" ${i===L.length-1?'disabled':''} title="Bajar una posición">↓</button>`;
+    mt.innerHTML=`<div class="gp"><span class="gl">Voz</span><button data-a="v" data-l="${i}" aria-pressed="${ln.v===2}" title="Cantante secundario">Voz 2</button><button data-a="bg" data-l="${i}" aria-pressed="${!!ln.bg}" ${i===0?'disabled':''} title="Voz de fondo de la línea anterior">Fondo</button></div><div class="gp"><span class="gl">Retraso</span><button data-a="sh" data-l="${i}" data-d="-1" title="Adelantar solo esta línea">−${st}</button><button data-a="sh" data-l="${i}" data-d="1" title="Atrasar solo esta línea">+${st}</button><span class="gl">desde aquí</span><button data-a="sh" data-l="${i}" data-all="1" data-d="-1" title="Adelantar esta línea y todas las siguientes">−${st}</button><button data-a="sh" data-l="${i}" data-all="1" data-d="1" title="Atrasar esta línea y todas las siguientes">+${st}</button></div><div class="gp"><span class="gl">Estructura</span><button data-a="split" data-l="${i}" aria-pressed="${splitL===i}" title="Dividir esta línea en dos">Dividir</button><button data-a="join" data-l="${i}" ${i===0?'disabled':''} title="Unir con la línea anterior">Unir ↑</button><button data-a="addu" data-l="${i}" title="Línea nueva arriba">＋↑</button><button data-a="addd" data-l="${i}" title="Línea nueva abajo">＋↓</button><button data-a="dup" data-l="${i}" title="Duplicar esta línea (sin tiempos)">Duplicar</button><button data-a="mu" data-l="${i}" ${i===0?'disabled':''} title="Subir una posición">↑</button><button data-a="md" data-l="${i}" ${i===L.length-1?'disabled':''} title="Bajar una posición">↓</button></div><div class="gp dng"><button data-a="clr" data-l="${i}" title="Borrar los tiempos de esta línea">Borrar tiempos</button></div>`;
     ws.appendChild(mt);
     ln.w.forEach((x,j)=>{
       const c=document.createElement('div'),nx=ln.w[j+1];
@@ -1716,7 +1765,7 @@ function render(only){
   const si=selIdx();$('selbar').hidden=!si.length;$('selc').textContent=si.length+(si.length===1?' línea seleccionada':' líneas seleccionadas');
   for(const x of [...wsel])if(!L.some(l=>l.w.includes(x)))wsel.delete(x);
   wbarUpd();dudUpd();
-  status();afterRender();
+  status();afterRender();psumUpd();
   if(sync&&wantScroll){const c=box.querySelector('.cur,.curend');
     if(c){const r=c.getBoundingClientRect(),vh=innerHeight,cy=r.top+r.height/2;
       /* si el cursor ya está en la zona media de la pantalla no se mueve la vista: así no "baila" con cada marca */
@@ -1724,7 +1773,7 @@ function render(only){
   wantScroll=false;
 }
 
-let noFollowUntil=0;
+let noFollowUntil=0,actI=-1;
 function mark(){
   if(P.l>=L.length)return;
   noFollowUntil=performance.now()+2000;
@@ -1864,7 +1913,7 @@ function dl(name,txt,mime){const u=URL.createObjectURL(new Blob([txt],{type:mime
 const base=()=>(audioName||'letra').replace(/\.[^.]+$/,'');
 const hasT=()=>tl(L).length>0||(alert('Todavía no hay palabras con tiempo.'),false);
 $('dt').onclick=()=>{if(hasT()&&okExp())dl(base()+'.ttml',toTTML(L,$('lang').value,$('par').checked),'application/ttml+xml')};
-$('dl').onclick=()=>{if(hasT()&&okExp())dl(base()+'.lrc',toLRC(L),'text/plain')};
+$('dlrc').onclick=()=>{if(hasT()&&okExp())dl(base()+'.lrc',toLRC(L),'text/plain')};
 $('cp').onclick=()=>{if(hasT()&&okExp())navigator.clipboard.writeText(toTTML(L,$('lang').value,$('par').checked)).then(()=>{$('cp').textContent='Copiado';setTimeout(()=>$('cp').textContent='Copiar .ttml',1500)},()=>alert('No pude copiar. Descargá el archivo.'))};
 $('so').onclick=()=>{const d=(+$('off').value)/1000;if(!d)return;hist();
   L.forEach(l=>l.w.forEach(x=>{if(x.s!=null)x.s=Math.max(0,r3(x.s+d));if(x.e!=null)x.e=Math.max(0,r3(x.e+d))}));render();save()};
@@ -4004,7 +4053,7 @@ function apApply(o){
   return t;
 }
 (function(){
-  const d=document.createElement('details');d.id='apd';
+  const d=document.createElement('details');d.id='apd';d.className='tp';
   d.innerHTML='<summary>Apariencia y accesibilidad</summary><div class="row"><label>Tema <select id="apth"><option value="auto">Automático (como tu sistema)</option><option value="claro">Claro</option><option value="oscuro">Oscuro</option></select></label>'
    +'<label>Tamaño del texto <select id="apts"><option value="100">Normal</option><option value="115">Grande (115 %)</option><option value="130">Más grande (130 %)</option><option value="150">Enorme (150 %)</option></select></label></div>'
    +'<div class="row"><label><input type="checkbox" id="aphc"> Alto contraste</label><label><input type="checkbox" id="aprm"> Reducir movimiento (sin animaciones)</label></div>'
@@ -4403,6 +4452,73 @@ if(RMT_REMOTE){
   $('rcc').onclick=async()=>{try{await navigator.clipboard.writeText($('rar').value)}catch(e){$('rar').select()}};
   const m=/[#&]remote=([^&]+)/.exec(location.hash);
   if(m){const tp=/[#&]t=([A-Za-z0-9]+)/.exec(location.hash);try{history.replaceState(null,'',location.pathname+location.search+'#remote')}catch(e){}$('rcd').open=true;$('rof').value=decodeURIComponent(m[1])+(tp?'.'+tp[1]:'');setTimeout(()=>$('rgr').click(),50)}
+}
+
+/* ===== Rediseño de la pantalla de sincronización ===== */
+(function(){
+  const sy=$('sy'),sye=$('sye');
+  const syncState=()=>sye.setAttribute('aria-pressed',String(sy.getAttribute('aria-pressed')!=='true'));
+  new MutationObserver(syncState).observe(sy,{attributes:true,attributeFilter:['aria-pressed']});syncState();
+  sye.onclick=()=>{if(sy.getAttribute('aria-pressed')==='true')sy.click()};
+  /* ajustes (menú) */
+  const cb=$('cfgb'),cf=$('cfg');
+  const closeCfg=()=>{cf.hidden=true;cb.setAttribute('aria-expanded','false')};
+  cb.onclick=e=>{e.stopPropagation();cf.hidden=!cf.hidden;cb.setAttribute('aria-expanded',String(!cf.hidden))};
+  document.addEventListener('click',e=>{if(!cf.hidden&&!cf.contains(e.target)&&e.target!==cb)closeCfg()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!cf.hidden){closeCfg();cb.focus()}});
+  /* herramientas: botones que abren cada sección */
+  const defs=[
+    ['pj','📁','Proyectos','álbum, portada, respaldo'],
+    ['ltd','📝','Letra e importación','pegar o cargar .lrc / .ttml'],
+    ['aud-sec','✨','Sincronización automática','Whisper (beta)'],
+    ['chd','🎸','Acordes',''],
+    ['avd,dud','⚠️','Avisos y dudosas',''],
+    ['exd','📤','Exportar y herramientas','.ttml, .lrc, copiar'],
+    ['more','⋯','Más','versiones, remoto, apariencia, ayuda']
+  ],more=[['vh','🕘','Versiones',''],['rmd','📡','Control remoto',''],['apd','🎨','Apariencia',''],['hwd','❓','Cómo se usa','']];
+  const box=$('tools'),extra=$('tools2');
+  const mk=(d,host)=>{
+    const b=document.createElement('button');b.type='button';b.className='acc';b.dataset.t=d[0];b.setAttribute('aria-pressed','false');
+    b.innerHTML='<span class="ic" aria-hidden="true">'+d[1]+'</span><span class="tt">'+d[2]+(d[3]?'<small>'+d[3]+'</small>':'')+'</span><span class="bdg" hidden></span>';
+    host.appendChild(b);return b;
+  };
+  defs.forEach(d=>mk(d,box));more.forEach(d=>mk(d,extra));
+  const els=t=>t.split(',').map(id=>$(id)).filter(Boolean);
+  const refresh=()=>{
+    document.querySelectorAll('#tools .acc,#tools2 .acc').forEach(b=>{
+      if(b.dataset.t==='more'){b.setAttribute('aria-pressed',String(!extra.hidden));return}
+      b.setAttribute('aria-pressed',String(els(b.dataset.t).some(d=>d.open)));
+    });
+  };
+  document.querySelectorAll('#tools .acc,#tools2 .acc').forEach(b=>b.onclick=()=>{
+    if(b.dataset.t==='more'){extra.hidden=!extra.hidden;refresh();return}
+    const list=els(b.dataset.t),on=list.some(d=>d.open);
+    /* una sección a la vez: al abrir una se cierran las demás */
+    document.querySelectorAll('main details.tp').forEach(d=>{if(!list.includes(d))d.open=false});
+    list.forEach(d=>d.open=!on);refresh();
+    if(!on&&list[0])setTimeout(()=>{try{list[0].scrollIntoView({block:'nearest',behavior:'smooth'})}catch(e){}},50);
+  });
+  document.querySelectorAll('main details.tp').forEach(d=>d.addEventListener('toggle',refresh));
+  /* contador en «Avisos y dudosas» */
+  const badge=()=>{
+    const n=t=>{const m=/\((\d+)\)/.exec($(t).textContent);return m?+m[1]:0};
+    const tot=n('avs')+n('duds'),b=document.querySelector('#tools .acc[data-t="avd,dud"] .bdg');
+    if(b){b.hidden=!tot;b.textContent=tot}
+    const v=/\((\d+)\)/.exec($('vhs').textContent),bv=document.querySelector('#tools2 .acc[data-t=vh] .bdg');
+    if(bv){bv.hidden=!v;if(v)bv.textContent=v[1]}
+  };
+  ['avs','duds','vhs'].forEach(id=>new MutationObserver(badge).observe($(id),{childList:true,characterData:true,subtree:true}));badge();
+  refresh();
+  /* línea activa: al tocar una línea se despliegan sus herramientas */
+  $('ls').addEventListener('click',e=>{
+    const r=e.target.closest('.ln');if(!r)return;
+    actI=+r.dataset.i;$('ls').querySelectorAll('.ln.act').forEach(x=>x!==r&&x.classList.remove('act'));r.classList.add('act');
+  });
+})();
+function psumUpd(){
+  const tot=L.reduce((n,l)=>n+l.w.length,0),dn=L.reduce((n,l)=>n+l.w.filter(x=>x.s!=null).length,0),lines=L.filter(l=>l.w.length&&l.w.every(x=>x.s!=null)).length;
+  $('psl').textContent=lines+' de '+L.length+' líneas';$('psb').style.width=(tot?Math.round(dn/tot*100):0)+'%';
+  $('psw').textContent=tot?dn+'/'+tot+' palabras con tiempo':'Todavía no hay letra';
 }
 </script>
 </body></html>
