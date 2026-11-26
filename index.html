@@ -1759,7 +1759,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.70',PK='lyricsync_projects';
+const APP_VERSION='3.71',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR))}catch(e){return false}try{cDirty()}catch(e){}return true};
@@ -2647,7 +2647,7 @@ async function ortLoad(file){
   }
   const er=new Error('no se pudo descargar la librería de separación desde ningún servidor, último intento: '+last+'. Puede estar bloqueada por tu red, antivirus o una extensión (adblock)');er.net=true;throw er;
 }
-let auSep=null,vocalsMem=null,lastInst=null,instMem=null,auT0b=0,sepInfo=null,AUR=null;
+let sepWarned=false,auSep=null,vocalsMem=null,lastInst=null,instMem=null,auT0b=0,sepInfo=null,AUR=null;
 const SEP_WORKER=[mdxPlan,mdxFFT,mdxSTFT,mdxWsum,mdxISTFT,mdxDemix].map(f=>f.toString()).join('\n')+`
 const loadOrt=async m=>{
     const errs=[];
@@ -2696,7 +2696,7 @@ async function to16k(mono,sr){
 async function sepModel(url,onProg){
   try{const c=await adbGet('model:'+url);if(c&&c.buf)return c.buf}catch(e){}
   /* descarga que se reanuda sola si el celular/tablet corta la conexión a mitad de camino */
-  let parts=[],got=0,total=0,lastE=null;
+  let parts=[],got=0,total=0,lastE=null,big=null;
   for(let t=0;t<8;t++){
     if(auCancel)throw new Error('cancelado');
     try{
@@ -2704,8 +2704,9 @@ async function sepModel(url,onProg){
       if(!r.ok)throw new Error('no se pudo descargar el modelo de separación ('+r.status+')');
       if(got&&r.status!==206){parts=[];got=0}
       if(!total){const cr=/\/(\d+)\s*$/.exec(r.headers.get('content-range')||'');total=cr?+cr[1]:(+r.headers.get('content-length')||0)}
+      if(total&&!big){try{big=new Uint8Array(total)}catch(e){big=null}}
       const rd=r.body.getReader();
-      for(;;){if(auCancel){try{rd.cancel()}catch(e){}throw new Error('cancelado')}const x=await rd.read();if(x.done)break;parts.push(x.value);got+=x.value.length;onProg(got,total)}
+      for(;;){if(auCancel){try{rd.cancel()}catch(e){}throw new Error('cancelado')}const x=await rd.read();if(x.done)break;if(big)big.set(x.value,got);else parts.push(x.value);got+=x.value.length;onProg(got,total)}
       if(total&&got<total)throw new Error('la descarga se cortó');
       lastE=null;break;
     }catch(e){
@@ -2715,7 +2716,7 @@ async function sepModel(url,onProg){
     }
   }
   if(lastE)throw new Error('se cortó la descarga del modelo y no pude retomarla: '+lastE.message+'. Revisá la conexión y probá de nuevo (lo ya bajado no se pierde si no cerrás la app).');
-  const u=new Uint8Array(got);let o=0;for(const q of parts){u.set(q,o);o+=q.length}
+  let u=big;if(!u||got!==big.length){u=new Uint8Array(got);let o=0;for(const q of parts)u.set(q,o),o+=q.length}parts=null;
   try{await adbSet('model:'+url,{buf:u.buffer,size:got})}catch(e){}
   return u.buffer;
 }
@@ -2739,10 +2740,11 @@ async function sepWorkerRun(model,device,l,r){
     };
     w.onerror=ev=>rej(new Error('falló el proceso de separación'+(ev.message?' ('+ev.message+')':'')));
     $('aubi').classList.add('ind');auT0b=Date.now();
-    w.postMessage({cmd:'sep',model,device,ortSrc:ortL.src,ortFile:(device==='webgpu'?'ort.webgpu.min.js':'ort.min.js'),ortBase:ortL.base,l,r},[l.buffer,r.buffer]);
+    w.postMessage({cmd:'sep',model,device,ortSrc:ortL.src,ortFile:(device==='webgpu'?'ort.webgpu.min.js':'ort.min.js'),ortBase:ortL.base,l,r},[l.buffer,r.buffer,model]);
   });
 }
 async function sepRun(){
+  if(navigator.deviceMemory&&navigator.deviceMemory<=4&&!sepWarned){sepWarned=true;if(!confirm('Este dispositivo informa poca memoria ('+navigator.deviceMemory+' GB o menos). La separación de voz usa un modelo muy pesado (más de 600 MB) y puede fallar o quedarse muy lenta. Se recomienda hacerla en una computadora. ¿Probar igual?'))throw new Error('cancelado')}
   let wl=null;try{if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen')}catch(e){}
   try{return await sepRun0()}finally{try{wl&&wl.release()}catch(e){}}
 }
@@ -2761,6 +2763,7 @@ async function sepRun0(){
       const out16=await to16k(mono,44100);sepInfo.dev=d;return out16;
     }catch(e){
       if(auCancel||e.message==='cancelado')throw e;
+      if(/allocate|memory|out of memory|buffer of size/i.test(e.message))e=new Error('este dispositivo no tiene memoria suficiente para el modelo de separación (necesita más de 1 GB libre). Separá la voz desde una computadora: '+e.message);
       lastErr=e;sepInfo.tries.push(d+': '+e.message);if(d==='webgpu'){auBase='La placa de video falló al separar la voz ('+e.message+'); pruebo con el procesador…';$('aust').textContent=auBase}
     }
   }
