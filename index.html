@@ -489,6 +489,10 @@ dialog h2{margin:0 0 6px;font:italic 700 22px Georgia,serif}
 dialog p{margin:6px 0;color:var(--mu)}
 
 /* ===== Rediseño de la pantalla de sincronización (v3.67) ===== */
+/* palabra que está sonando: verde con letra bien legible */
+.w.on,.w.on:not(.un){background:var(--ac);border-color:var(--ac);color:var(--acx)}
+.w.on input,.w.on .s,.w.on .e,.w.on .tx{color:var(--acx);opacity:1}
+.w.on .e{opacity:.8}
 .bar{padding:12px 20px 8px}
 .deck{border:1px solid var(--ln);border-radius:20px;padding:10px 12px;gap:8px 10px}
 .deck .vsep{width:1px;height:26px;background:var(--ln);margin:0 2px}
@@ -1709,7 +1713,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.67',PK='lyricsync_projects';
+const APP_VERSION='3.68',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR));return true}catch(e){return false}};
