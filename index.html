@@ -1759,7 +1759,7 @@ const $=id=>document.getElementById(id),a=$('a');
 let L=[],P={l:0,w:0},sync=false,chips=[],lastOn=[],audioName='';
 const CAP=1.2,auto=()=>$('auto').checked,noEnd=()=>auto()||holdMode,nTok=l=>L[l].w.length+(noEnd()?0:1);
 const key=l=>l.w.map((x,i)=>(i?(x.j?'|':' '):'')+x.t).join(''),kt=l=>l.bg?'('+key(l)+')':key(l);
-const APP_VERSION='3.69',PK='lyricsync_projects';
+const APP_VERSION='3.70',PK='lyricsync_projects';
 let PR={cur:null,list:{}},lastSer='';
 let LS_BLOCKED=false;
 const savePR=()=>{if(LS_BLOCKED)return false;try{localStorage.setItem(PK,JSON.stringify(PR))}catch(e){return false}try{cDirty()}catch(e){}return true};
@@ -2695,9 +2695,26 @@ async function to16k(mono,sr){
 }
 async function sepModel(url,onProg){
   try{const c=await adbGet('model:'+url);if(c&&c.buf)return c.buf}catch(e){}
-  const r=await fetch(url);if(!r.ok)throw new Error('no se pudo descargar el modelo de separación ('+r.status+')');
-  const total=+r.headers.get('content-length')||0,rd=r.body.getReader(),parts=[];let got=0;
-  for(;;){const x=await rd.read();if(x.done)break;parts.push(x.value);got+=x.value.length;onProg(got,total)}
+  /* descarga que se reanuda sola si el celular/tablet corta la conexión a mitad de camino */
+  let parts=[],got=0,total=0,lastE=null;
+  for(let t=0;t<8;t++){
+    if(auCancel)throw new Error('cancelado');
+    try{
+      const r=await fetch(url,got?{headers:{Range:'bytes='+got+'-'}}:{});
+      if(!r.ok)throw new Error('no se pudo descargar el modelo de separación ('+r.status+')');
+      if(got&&r.status!==206){parts=[];got=0}
+      if(!total){const cr=/\/(\d+)\s*$/.exec(r.headers.get('content-range')||'');total=cr?+cr[1]:(+r.headers.get('content-length')||0)}
+      const rd=r.body.getReader();
+      for(;;){if(auCancel){try{rd.cancel()}catch(e){}throw new Error('cancelado')}const x=await rd.read();if(x.done)break;parts.push(x.value);got+=x.value.length;onProg(got,total)}
+      if(total&&got<total)throw new Error('la descarga se cortó');
+      lastE=null;break;
+    }catch(e){
+      if(e.message==='cancelado')throw e;
+      lastE=e;if(/\(4\d\d\)/.test(e.message)&&!/\(416\)/.test(e.message))break;
+      await new Promise(ok=>setTimeout(ok,Math.min(8000,1000*(t+1))));
+    }
+  }
+  if(lastE)throw new Error('se cortó la descarga del modelo y no pude retomarla: '+lastE.message+'. Revisá la conexión y probá de nuevo (lo ya bajado no se pierde si no cerrás la app).');
   const u=new Uint8Array(got);let o=0;for(const q of parts){u.set(q,o);o+=q.length}
   try{await adbSet('model:'+url,{buf:u.buffer,size:got})}catch(e){}
   return u.buffer;
@@ -2726,6 +2743,10 @@ async function sepWorkerRun(model,device,l,r){
   });
 }
 async function sepRun(){
+  let wl=null;try{if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen')}catch(e){}
+  try{return await sepRun0()}finally{try{wl&&wl.release()}catch(e){}}
+}
+async function sepRun0(){
   const attempts=(await hasGPU())?['webgpu','wasm']:['wasm'];let lastErr=null;sepInfo={tries:[],dev:null};
   for(const d of attempts){
     try{
